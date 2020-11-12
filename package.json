@@ -1,6 +1,6 @@
 {
-	"name": "vscode-extensions",
-	"displayName": "vscode-extensions",
+	"name": "oneapi-devflow",
+	"displayName": "oneapi-devflow",
 	"description": "",
 	"version": "0.0.1",
 	"engines": {
@@ -10,19 +10,14 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:vscode-extensions.build",
-		"onCommand:vscode-extensions.enviroment"
+		"onCommand:oneapi-devflow.build"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "vscode-extensions.build",
+				"command": "oneapi-devflow.build",
 				"title": "oneAPI:Build oneAPI sample."
-			},
-			{
-				"command": "vscode-extensions.enviroment",
-				"title": "Check and set oneAPI enviroment."
 			}
 		]
 	},
