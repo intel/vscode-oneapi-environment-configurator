@@ -31,8 +31,8 @@ export class DevFlow {
     }
     buildSample(): void {
         const tasks: vscode.QuickPickItem[] = [{ label: 'Run Make' }, { label: 'Get Makefile from Cmake' }];
-        this.setEnviroment().then(() => {
-            vscode.window.showQuickPick(tasks).then(async selection => {
+        this.setEnviroment().then(async () => {
+            await vscode.window.showQuickPick(tasks).then(async selection => {
                 if (!selection) {
                     return;
                 }
@@ -59,7 +59,7 @@ export class DevFlow {
     async runMake(): Promise<void> {
         this.terminal.sendText(`cd ${vscode.workspace.rootPath}`);
         this.terminal.sendText(`[ -d ./build ] && cd build`);
-        const targets = this.getMakeTargets();
+        const targets = await this.getMakeTargets();
         await vscode.window.showQuickPick(targets).then(selection => {
             if (!selection) {
                 return;
@@ -67,7 +67,7 @@ export class DevFlow {
             this.terminal.sendText(`make ${selection}`);
         });
     }
-    getMakeTargets(): string[] {
+    async getMakeTargets(): Promise<string[]> {
         let buildPath: string | undefined = existsSync(vscode.workspace.rootPath + '/build') ?
                                             vscode.workspace.rootPath + '/build' : vscode.workspace.rootPath;
         const targets = execSync(`make -pRrq : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($1 !~ "^[#.]") {print $1}}' | egrep -v '^[^[:alnum:]]' | sort`, { cwd: buildPath }).toString().split('\n');
