@@ -3,6 +3,7 @@
 	"displayName": "oneapi-devflow",
 	"description": "",
 	"version": "0.0.1",
+	"publisher": "oneAPI-dev-flow",
 	"engines": {
 		"vscode": "^1.46.0"
 	},
@@ -10,14 +11,14 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:oneapi-devflow.build"
+		"onCommand:oneapi-devflow.runExtension"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "oneapi-devflow.build",
-				"title": "oneAPI:Build oneAPI sample."
+				"command": "oneapi-devflow.runExtension",
+				"title": "oneAPI devflow: Run extension."
 			}
 		]
 	},

@@ -1,10 +1,11 @@
-import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import * as devFlow from './devFlow';
 
 export function activate(context: vscode.ExtensionContext) {
 	let devFlofData = new devFlow.DevFlow();
-	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.build', () => devFlofData.buildSample()));
+	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.runExtension', () => devFlofData.runExtension()));
 }
 
-export function deactivate() { }
+export function deactivate() {
+	console.log("Intel oneAPI DevFlow: Goodbye");
+}
