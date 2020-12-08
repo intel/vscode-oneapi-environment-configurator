@@ -11,7 +11,8 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:oneapi-devflow.runExtension"
+		"onCommand:oneapi-devflow.runExtension",
+		"onCommand:oneapi-devflow.refreshEnvFile"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -19,6 +20,10 @@
 			{
 				"command": "oneapi-devflow.runExtension",
 				"title": "oneAPI devflow: Run extension."
+			},
+			{
+				"command": "oneapi-devflow.refreshEnvFile",
+				"title": "oneAPI devflow: Refresh oneAPI.env file."
 			}
 		]
 	},
