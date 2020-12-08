@@ -3,23 +3,27 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 import { win32 } from 'path';
 
-const debugConfig = {   'name' :      'bla',
-                        'type' :      'cppdbg',
-                        'request' :   'launch',
-                        'program' :   '${workspaceFolder}/${workspaceFolderBasename}',
-                        'args' :      [],
-                        'stopAtEntry' : false,
-                        'cwd' :       '${workspaceFolder}',
-                        'environment' : [],
-                        'externalConsole' : false,
-                        "envFile": "${workspaceFolder}/oneAPI.env",
-                        'MIMode' :    'gdb',
-                        'setupCommands' :    
-                            [
-                                {'description' :    'Enable pretty-printing for gdb',
-                                'text' :    '-enable-pretty-printing',
-                                'ignoreFailures' :    true,}
-                            ] };
+const debugConfig = {
+    'name': 'bla',
+    'type': 'cppdbg',
+    'request': 'launch',
+    'program': '${workspaceFolder}/${workspaceFolderBasename}',
+    'args': [],
+    'stopAtEntry': false,
+    'cwd': '${workspaceFolder}',
+    'environment': [],
+    'externalConsole': false,
+    "envFile": "${workspaceFolder}/oneAPI.env",
+    'MIMode': 'gdb',
+    'setupCommands':
+        [
+            {
+                'description': 'Enable pretty-printing for gdb',
+                'text': '-enable-pretty-printing',
+                'ignoreFailures': true,
+            }
+        ]
+};
 
 export class DevFlow {
     terminal: vscode.Terminal;
@@ -54,7 +58,7 @@ export class DevFlow {
         }
     }
     runExtension(): void {
-        const tasks: vscode.QuickPickItem[] = [{ label: 'Generate Developer Flow' }, { label: 'Get Makefile from Cmake' }];
+        const tasks: vscode.QuickPickItem[] = [{ label: 'Generate Developer Flow' }];
         this.setEnviroment().then(async () => {
             await vscode.window.showQuickPick(tasks).then(async selection => {
                 if (!selection) {
@@ -63,14 +67,10 @@ export class DevFlow {
                 switch (selection.label) {
                     case 'Generate Developer Flow':
                         await this.makeTasksFile();
-                        if (!this.launchJsonExist)
-                        {
+                        if (!this.launchJsonExist) {
                             await this.makeLaunchFile();
                             this.launchJsonExist = true;
                         }
-                        break;
-                    case 'Get Makefile from Cmake':
-                        await this.makeFromCmake();
                         break;
                     default:
                         break;
@@ -79,40 +79,45 @@ export class DevFlow {
         });
 
     }
-    async makeFromCmake(): Promise<void> {
-        fs.mkdir(`${vscode.workspace.rootPath}/build`, (err) => {
-            if (err) {
-                console.error(err);
-                return;
-            }
-        });
-        this.terminal.sendText(`cmake -S ${vscode.workspace.rootPath} -B ${vscode.workspace.rootPath}/build`);
-    }
     async makeTasksFile(): Promise<void> {
-        let makefileDir: string = `${vscode.workspace.rootPath}`;
-        if (fs.existsSync(`${vscode.workspace.rootPath}/build/Makefile`)) {
-            makefileDir += '/build';
+        let buildSystem: string = 'cmake';
+        let buildDir: string = `${vscode.workspace.rootPath}`;
+        if (fs.existsSync(`${vscode.workspace.rootPath}/Makefile`)) {
+            buildSystem = 'make';
         }
-        this.terminal.sendText(`cd ${makefileDir}`);
-        const targets = await this.getMakeTargets(makefileDir);
-        await vscode.window.showQuickPick(targets).then(async selection => {
+        const buildTargets = await this.getTargets(buildDir, buildSystem);
+
+        await vscode.window.showQuickPick(buildTargets).then(async selection => {
             if (!selection) {
                 return;
             }
             const launchConfig = vscode.workspace.getConfiguration('tasks');
-            let targetValue = {
+            let taskConfigValue = {
                 label: selection,
-                command: `sed -e's/$/"/' ${vscode.workspace.rootPath}/env.env | sed -e's/=/="/' > tmp && set -a && source tmp && set +a && rm tmp && make ${selection} -f ${makefileDir}/Makefile`,
+                command: `sed -e's/$/"/' ${vscode.workspace.rootPath}/oneAPI.env | sed -e's/=/="/' > tmp && set -a && source tmp && set +a && rm tmp `,
                 type: 'shell',
                 options: {
-                    cwd: `${makefileDir}`
+                    cwd: `${buildDir}`
                 }
             };
+            switch (buildSystem) {
+                case 'make': {
+                    taskConfigValue.command += `&& make ${selection} -f ${buildDir}/Makefile`;
+                    break;
+                }
+                case 'cmake': {
+                    taskConfigValue.command += `&& mkdir -p build && cmake -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
             let config: any = launchConfig['tasks'];
             if (config === undefined) {
-                config = [targetValue];
+                config = [taskConfigValue];
             } else {
-                config.push(targetValue);
+                config.push(taskConfigValue);
             };
             launchConfig.update('tasks', config, false);
         });
@@ -123,13 +128,30 @@ export class DevFlow {
         configurations.push(debugConfig);
         launchConfig.update('configurations', configurations, false);
         return;
-    
-}
-    async getMakeTargets(makefilePath: string): Promise<string[]> {
-        const targets = child_process.execSync(
-            `make -pRrq : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($1 !~ "^[#.]") {print $1}}' | egrep -v '^[^[:alnum:]]' | sort`,
-            { cwd: makefilePath }).toString().split('\n');
-        targets.pop();
-        return targets;
+
+    }
+    async getTargets(buildDirPath: string, buildSystem: string): Promise<string[]> {
+        let targets: string[];
+        switch (buildSystem) {
+            case 'make': {
+                targets = child_process.execSync(
+                    `make -pRrq : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($1 !~ "^[#.]") {print $1}}' | egrep -v '^[^[:alnum:]]' | sort`,
+                    { cwd: buildDirPath }).toString().split('\n');
+                targets.pop();
+                return targets;
+            }
+            case 'cmake': {
+                targets = child_process.execSync(
+                    `grep 'add_custom_target' CMakeLists.txt | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
+                    { cwd: buildDirPath }).toString().split('\n');
+                targets.pop();
+                targets.push('all', 'clean');
+                return targets;
+            }
+            default: {
+                break;
+            }
+        }
+        return [];
     }
 }
