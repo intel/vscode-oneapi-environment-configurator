@@ -30,11 +30,11 @@ export class DevFlow {
     env: boolean;
     launchJsonExist: boolean;
     constructor() {
-        this.terminal = vscode.window.activeTerminal ? vscode.window.activeTerminal : vscode.window.createTerminal();
-        this.env = false;
+        this.terminal = vscode.window.createTerminal();
+        this.env = fs.existsSync(`${vscode.workspace.rootPath}/oneAPI.env`) ? true : false;
         this.launchJsonExist = false;
     }
-    async setEnviroment(): Promise<void> {
+    async setEnvironment(): Promise<void> {
         if (!this.env) {
             await vscode.window.showInformationMessage('Provide path to oneAPI setvars.sh.', 'select').then(async selection => {
                 if (selection === 'select') {
@@ -57,9 +57,13 @@ export class DevFlow {
             });
         }
     }
+    async refreshEnvFile() {
+        this.env =false;
+        this.setEnvironment();
+    }
     runExtension(): void {
         const tasks: vscode.QuickPickItem[] = [{ label: 'Generate Developer Flow' }];
-        this.setEnviroment().then(async () => {
+        this.setEnvironment().then(async () => {
             await vscode.window.showQuickPick(tasks).then(async selection => {
                 if (!selection) {
                     return;
