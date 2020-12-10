@@ -27,15 +27,11 @@ const debugConfig = {
 
 export class DevFlow {
     terminal: vscode.Terminal;
-    env: boolean;
-    launchJsonExist: boolean;
     constructor() {
         this.terminal = vscode.window.createTerminal();
-        this.env = fs.existsSync(`${vscode.workspace.rootPath}/oneAPI.env`) ? true : false;
-        this.launchJsonExist = false;
     }
     async setEnvironment(): Promise<void> {
-        if (!this.env) {
+        if (!fs.existsSync(`${vscode.workspace.rootPath}/oneAPI.env`)) {
             await vscode.window.showInformationMessage('Provide path to oneAPI setvars.sh.', 'select').then(async selection => {
                 if (selection === 'select') {
                     const options: vscode.OpenDialogOptions = {
@@ -50,16 +46,11 @@ export class DevFlow {
                             this.terminal.sendText(`source ${fileUri[0].fsPath}`);
                             // create environment file
                             this.terminal.sendText(`env > oneAPI.env`);
-                            this.env = true;
                         }
                     });
                 }
             });
         }
-    }
-    async refreshEnvFile() {
-        this.env =false;
-        this.setEnvironment();
     }
     runExtension(): void {
         const tasks: vscode.QuickPickItem[] = [{ label: 'Generate Developer Flow' }];
@@ -71,9 +62,8 @@ export class DevFlow {
                 switch (selection.label) {
                     case 'Generate Developer Flow':
                         await this.makeTasksFile();
-                        if (!this.launchJsonExist) {
+                        if (!fs.existsSync(`${vscode.workspace.rootPath}/.vscode/launch.json`)) {
                             await this.makeLaunchFile();
-                            this.launchJsonExist = true;
                         }
                         break;
                     default:
@@ -146,7 +136,7 @@ export class DevFlow {
             }
             case 'cmake': {
                 targets = child_process.execSync(
-                    `grep 'add_custom_target' CMakeLists.txt | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
+                    `awk '/^add_custom_target/' CMakeLists.txt | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
                     { cwd: buildDirPath }).toString().split('\n');
                 targets.pop();
                 targets.push('all', 'clean');

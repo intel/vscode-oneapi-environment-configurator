@@ -1,0 +1,19 @@
+image: node:latest
+
+stages:
+  - build
+
+cache:
+  paths:
+    - node_modules/
+
+build:
+  stage: build
+  tags: 
+    - docker
+  script:
+    - yarn && yarn compile
+    - yarn package
+  artifacts:
+    paths:
+      - "*.vsix"
