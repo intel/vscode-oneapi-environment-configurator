@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';
-import { win32 } from 'path';
 
 const debugConfig = {
     'name': 'bla',
@@ -135,11 +134,14 @@ export class DevFlow {
                 return targets;
             }
             case 'cmake': {
-                targets = child_process.execSync(
-                    `awk '/^add_custom_target/' CMakeLists.txt | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
-                    { cwd: buildDirPath }).toString().split('\n');
-                targets.pop();
-                targets.push('all', 'clean');
+                targets = ['all', 'clean'];
+                let pathsToCmakeLists: string[] = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
+                pathsToCmakeLists.forEach((path) => {
+                    targets = targets.concat(child_process.execSync(
+                        `awk '/^add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
+                        { cwd: buildDirPath }).toString().split('\n'));
+                    targets.pop();
+                });
                 return targets;
             }
             default: {
