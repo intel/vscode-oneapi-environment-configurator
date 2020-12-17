@@ -27,13 +27,17 @@ const debugConfig = {
 
 export class DevFlow {
     terminal: vscode.Terminal;
-    constructor() {
+    launchJsonExist: boolean;
+    context:  vscode.ExtensionContext;
+    constructor(c:  vscode.ExtensionContext) {
         this.terminal = vscode.window.createTerminal();
+        this.launchJsonExist = false;
+        this.context = c;
     }
-    async setEnvironment(): Promise<void> {
-        if (!fs.existsSync(`${vscode.workspace.rootPath}/oneAPI.env`)) {
-            await vscode.window.showInformationMessage('Provide path to oneAPI setvars.sh.', 'select').then(async selection => {
-                if (selection === 'select') {
+    async checkAndGetEnvironment(): Promise<void> {
+        if (!process.env.ONEAPI_ROOT) {
+            await vscode.window.showInformationMessage('Provide path to oneAPI setvars.sh.', 'Select').then(async selection => {
+                if (selection === 'Select') {
                     const options: vscode.OpenDialogOptions = {
                         canSelectMany: false,
                         openLabel: 'Select',
@@ -43,78 +47,98 @@ export class DevFlow {
                     };
                     await vscode.window.showOpenDialog(options).then(fileUri => {
                         if (fileUri && fileUri[0]) {
-                            this.terminal.sendText(`source ${fileUri[0].fsPath}`);
-                            // create environment file
-                            this.terminal.sendText(`env > oneAPI.env`);
+                            this.getEnvironment(fileUri[0].fsPath);
                         }
                     });
                 }
             });
         }
     }
-    runExtension(): void {
-        const tasks: vscode.QuickPickItem[] = [{ label: 'Generate Developer Flow' }];
-        this.setEnvironment().then(async () => {
-            await vscode.window.showQuickPick(tasks).then(async selection => {
-                if (!selection) {
-                    return;
-                }
-                switch (selection.label) {
-                    case 'Generate Developer Flow':
-                        await this.makeTasksFile();
-                        if (!fs.existsSync(`${vscode.workspace.rootPath}/.vscode/launch.json`)) {
-                            await this.makeLaunchFile();
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-        });
 
+    runExtension(): any {
+        let workspaceFolder = this.getworkspaceFolder();
+        if (workspaceFolder === undefined) {
+            vscode.window.showErrorMessage("Cannot find the working directory. Please add one or more working directories and try again.");
+            vscode.window.showInformationMessage("Please add one or more working directories and try again.");
+            return undefined; // for unit tests
+        }
+        this.checkAndGetEnvironment().then(async () => {
+            await this.makeTasksFile(await workspaceFolder);
+            await this.makeLaunchFile();
+        });
+        return true; // for unit tests
     }
-    async makeTasksFile(): Promise<void> {
+
+    async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined>  {
+        if (vscode.workspace.workspaceFolders?.length === 1) {
+            return vscode.workspace.workspaceFolders[0];
+        }
+            vscode.window.showWorkspaceFolderPick().then(selection => {
+                if (!selection) {
+                    return undefined; // for unit tests
+                }
+                return selection;
+            });
+    }
+
+    async makeTasksFile(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<boolean | undefined> {
+        if( workspaceFolder === undefined){
+            return undefined;
+        }
         let buildSystem: string = 'cmake';
-        let buildDir: string = `${vscode.workspace.rootPath}`;
-        if (fs.existsSync(`${vscode.workspace.rootPath}/Makefile`)) {
+        let buildDir: string = `${workspaceFolder.uri.fsPath}`;
+        if (fs.existsSync(`${workspaceFolder.uri.fsPath}/Makefile`)) {
             buildSystem = 'make';
         }
         const buildTargets = await this.getTargets(buildDir, buildSystem);
-
-        await vscode.window.showQuickPick(buildTargets).then(async selection => {
-            if (!selection) {
-                return;
-            }
-            const launchConfig = vscode.workspace.getConfiguration('tasks');
-            let taskConfigValue = {
-                label: selection,
-                command: `sed -e's/$/"/' ${vscode.workspace.rootPath}/oneAPI.env | sed -e's/=/="/' > tmp && set -a && source tmp && set +a && rm tmp `,
-                type: 'shell',
-                options: {
-                    cwd: `${buildDir}`
+        buildTargets.push('oneAPI DevFlow: Exit');
+        let isContinue = true;
+        do
+        {
+            await vscode.window.showQuickPick(buildTargets).then(async selection => {
+                if (!selection) {
+                    isContinue = false;
+                    return false; // for unit tests
                 }
-            };
-            switch (buildSystem) {
-                case 'make': {
-                    taskConfigValue.command += `&& make ${selection} -f ${buildDir}/Makefile`;
-                    break;
+                const launchConfig = vscode.workspace.getConfiguration('tasks');
+                let taskConfigValue = {
+                    label: selection,
+                    command: ``,
+                    type: 'shell',
+                    options: {
+                        cwd: `${buildDir}`
+                    }
+                };
+                if (selection === 'oneAPI DevFlow: Exit') {
+                        isContinue = false;
                 }
-                case 'cmake': {
-                    taskConfigValue.command += `&& mkdir -p build && cmake -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
-                    break;
+                else {
+                    switch (buildSystem) {
+                        case 'make': {
+                            taskConfigValue.command += `make ${selection} -f ${buildDir}/Makefile`;
+                            break;
+                        }
+                        case 'cmake': {
+                            taskConfigValue.command += `mkdir -p build && cmake -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
+                            break;
+                        }
+                        default: {
+                            isContinue = false;
+                            break;
+                        }
+                    }
+                
+                    let config: any = launchConfig['tasks'];
+                    if (config === undefined) {
+                        config = [taskConfigValue];
+                    } else {
+                        config.push(taskConfigValue);
+                    };
+                    launchConfig.update('tasks', config, false);
                 }
-                default: {
-                    break;
-                }
-            }
-            let config: any = launchConfig['tasks'];
-            if (config === undefined) {
-                config = [taskConfigValue];
-            } else {
-                config.push(taskConfigValue);
-            };
-            launchConfig.update('tasks', config, false);
-        });
+            });
+        } while (isContinue);
+        return true;
     }
     makeLaunchFile(): void {
         const launchConfig = vscode.workspace.getConfiguration('launch');
@@ -147,5 +171,37 @@ export class DevFlow {
             }
         }
         return [];
+    };
+
+    getEnvironment(fspath: string) {
+        const collection = this.context.environmentVariableCollection;
+        
+        let a = child_process.exec(`bash -c ". ${fspath}  > /dev/null && printenv"`);
+        a.stdout?.on('data', (d: string) => {
+            let vars = d.split('\n');
+            var v1 = {};
+            vars.forEach(l => {
+                //console.log(v);
+                let e = l.indexOf('=');
+                let k = <string> l.substr(0,e);
+                let v = <string> l.substr((e + 1));
+    
+                console.log(`${k} eq ${v}`);
+    
+                if (process.env[k] !== v) {
+                    if (!process.env[k]) {
+                        collection.append(k,v)
+                    } else {
+                        collection.replace(k, v)
+                    }
+                }
+    
+                (process.env as any)[k] = v; // Spooky Magic
+                
+                
+            }); 
+        
+        });
+    
     }
 }
