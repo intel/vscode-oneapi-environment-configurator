@@ -162,7 +162,7 @@ export class DevFlow {
                 let pathsToCmakeLists: string[] = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
                 pathsToCmakeLists.forEach((path) => {
                     targets = targets.concat(child_process.execSync(
-                        `awk '/^add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
+                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
                         { cwd: buildDirPath }).toString().split('\n'));
                     targets.pop();
                 });
