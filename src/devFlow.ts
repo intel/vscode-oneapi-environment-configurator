@@ -13,6 +13,7 @@ const debugConfig = {
     'environment': [],
     'externalConsole': false,
     "envFile": "${workspaceFolder}/oneAPI.env",
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'MIMode': 'gdb',
     'setupCommands':
         [
@@ -25,13 +26,12 @@ const debugConfig = {
 };
 
 export class DevFlow {
-    terminal: vscode.Terminal;
-    launchJsonExist: boolean;
+    terminal: vscode.Terminal | undefined;
     context:  vscode.ExtensionContext;
+    collection: vscode.EnvironmentVariableCollection;
     constructor(c:  vscode.ExtensionContext) {
-        this.terminal = vscode.window.createTerminal();
-        this.launchJsonExist = false;
         this.context = c;
+        this.collection = this.context.environmentVariableCollection;
     }
     async checkAndGetEnvironment(): Promise<void> {
         if (!process.env.ONEAPI_ROOT) {
@@ -54,22 +54,31 @@ export class DevFlow {
         }
     }
 
+    openShellOneAPI() {
+        this.terminal = vscode.window.createTerminal({name: "Intel oneAPI DevFlow: bash",env: (this.collection as any), strictEnv: true});
+        this.terminal.show();
+    }
+
     runExtension(): any {
         let workspaceFolder = this.getworkspaceFolder();
         if (workspaceFolder === undefined) {
-            vscode.window.showErrorMessage("Cannot find the working directory. Please add one or more working directories and try again.");
+            vscode.window.showErrorMessage("Cannot find the working directory.");
             vscode.window.showInformationMessage("Please add one or more working directories and try again.");
             return undefined; // for unit tests
         }
         this.checkAndGetEnvironment().then(async () => {
             await this.makeTasksFile(await workspaceFolder);
             await this.makeLaunchFile();
+            await this.openShellOneAPI();
         });
+
         return true; // for unit tests
     }
 
     async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined>  {
-        if (vscode.workspace.workspaceFolders?.length === 1) {
+        if (!vscode.workspace.workspaceFolders) {
+            return undefined;
+        } else if (vscode.workspace.workspaceFolders?.length === 1) {
             return vscode.workspace.workspaceFolders[0];
         }
             vscode.window.showWorkspaceFolderPick().then(selection => {
@@ -176,8 +185,6 @@ export class DevFlow {
     };
 
     getEnvironment(fspath: string) {
-        const collection = this.context.environmentVariableCollection;
-        
         let a = child_process.exec(`bash -c ". ${fspath}  > /dev/null && printenv"`);
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
@@ -192,17 +199,13 @@ export class DevFlow {
     
                 if (process.env[k] !== v) {
                     if (!process.env[k]) {
-                        collection.append(k,v)
+                        this.collection.append(k,v);
                     } else {
-                        collection.replace(k, v)
+                        this.collection.replace(k, v);
                     }
                 }
-    
                 (process.env as any)[k] = v; // Spooky Magic
-                
-                
             }); 
-        
         });
     
     }
