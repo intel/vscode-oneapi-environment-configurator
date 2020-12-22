@@ -3,24 +3,23 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 
 const debugConfig = {
-    'name': 'bla',
-    'type': 'cppdbg',
-    'request': 'launch',
-    'program': '${workspaceFolder}/${workspaceFolderBasename}',
-    'args': [],
-    'stopAtEntry': false,
-    'cwd': '${workspaceFolder}',
-    'environment': [],
-    'externalConsole': false,
-    "envFile": "${workspaceFolder}/oneAPI.env",
+    name : 'bla',
+    type : 'cppdbg',
+    request:  'launch',
+    program : '${workspaceFolder}/${workspaceFolderBasename}',
+    args : [],
+    stopAtEntry : false,
+    cwd : '${workspaceFolder}',
+    environment : [],
+    externalConsole : false,
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    'MIMode': 'gdb',
-    'setupCommands':
+    MIMode : 'gdb',
+    setupCommands:
         [
             {
-                'description': 'Enable pretty-printing for gdb',
-                'text': '-enable-pretty-printing',
-                'ignoreFailures': true,
+                description : 'Enable pretty-printing for gdb',
+                text: '-enable-pretty-printing',
+                ignoreFailures: true
             }
         ]
 };
@@ -55,7 +54,9 @@ export class DevFlow {
     }
 
     openShellOneAPI() {
+        if (this.terminal === undefined) {
         this.terminal = vscode.window.createTerminal({name: "Intel oneAPI DevFlow: bash",env: (this.collection as any), strictEnv: true});
+        }
         this.terminal.show();
     }
 
@@ -69,7 +70,6 @@ export class DevFlow {
         this.checkAndGetEnvironment().then(async () => {
             await this.makeTasksFile(await workspaceFolder);
             await this.makeLaunchFile();
-            await this.openShellOneAPI();
         });
 
         return true; // for unit tests
@@ -207,6 +207,7 @@ export class DevFlow {
                 (process.env as any)[k] = v; // Spooky Magic
             }); 
         });
-    
+        this.openShellOneAPI();
+        this.terminal?.sendText("dpcpp");
     }
 }
