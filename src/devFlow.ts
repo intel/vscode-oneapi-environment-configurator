@@ -27,31 +27,11 @@ const debugConfig = {
 export class DevFlow {
     terminal: vscode.Terminal;
     launchJsonExist: boolean;
-    context:  vscode.ExtensionContext;
-    constructor(c:  vscode.ExtensionContext) {
+    context: vscode.ExtensionContext;
+    constructor(c: vscode.ExtensionContext) {
         this.terminal = vscode.window.createTerminal();
         this.launchJsonExist = false;
         this.context = c;
-    }
-    async checkAndGetEnvironment(): Promise<void> {
-        if (!process.env.ONEAPI_ROOT) {
-            await vscode.window.showInformationMessage('Provide path to oneAPI setvars.sh.', 'Select').then(async selection => {
-                if (selection === 'Select') {
-                    const options: vscode.OpenDialogOptions = {
-                        canSelectMany: false,
-                        openLabel: 'Select',
-                        filters: {
-                            'oneAPI setvars file': ['sh'],
-                        }
-                    };
-                    await vscode.window.showOpenDialog(options).then(fileUri => {
-                        if (fileUri && fileUri[0]) {
-                            this.getEnvironment(fileUri[0].fsPath);
-                        }
-                    });
-                }
-            });
-        }
     }
 
     runExtension(): any {
@@ -68,20 +48,69 @@ export class DevFlow {
         return true; // for unit tests
     }
 
-    async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined>  {
+    async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
         if (vscode.workspace.workspaceFolders?.length === 1) {
             return vscode.workspace.workspaceFolders[0];
         }
-            vscode.window.showWorkspaceFolderPick().then(selection => {
-                if (!selection) {
-                    return undefined; // for unit tests
+        vscode.window.showWorkspaceFolderPick().then(selection => {
+            if (!selection) {
+                return undefined; // for unit tests
+            }
+            return selection;
+        });
+    }
+
+    async checkAndGetEnvironment(): Promise<void> {
+        if (!process.env.ONEAPI_ROOT) {
+            await vscode.window.showInformationMessage('Provide path to oneAPI setvars file.', 'Select').then(async selection => {
+                if (selection === 'Select') {
+                    const options: vscode.OpenDialogOptions = {
+                        canSelectMany: false,
+                        openLabel: 'Select',
+                        filters: {
+                            'oneAPI setvars file': [process.platform == 'win32' ? 'bat' : 'sh'],
+                        }
+                    };
+                    await vscode.window.showOpenDialog(options).then(fileUri => {
+                        if (fileUri && fileUri[0]) {
+                            this.getEnvironment(fileUri[0].fsPath);
+                        }
+                    });
                 }
-                return selection;
             });
+        }
+    }
+
+    getEnvironment(fspath: string) {
+        const collection = this.context.environmentVariableCollection;
+
+        let command: string = process.platform == 'win32' ? `"${fspath}" > NULL && set` : `bash -c ". ${fspath}  > /dev/null && printenv"`;
+        let a = child_process.exec(command);
+        a.stdout?.on('data', (d: string) => {
+            let vars = d.split('\n');
+            var v1 = {};
+            vars.forEach(l => {
+                //console.log(v);
+                let e = l.indexOf('=');
+                let k = <string>l.substr(0, e);
+                let v = <string>l.substr((e + 1));
+
+                console.log(`${k} eq ${v}`);
+
+                if (process.env[k] !== v) {
+                    if (!process.env[k]) {
+                        collection.append(k, v)
+                    } else {
+                        collection.replace(k, v)
+                    }
+                }
+                (process.env as any)[k] = v; // Spooky Magic
+            });
+        });
     }
 
     async makeTasksFile(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<boolean | undefined> {
-        if( workspaceFolder === undefined){
+        if (workspaceFolder === undefined) {
             return undefined;
         }
         let buildSystem: string = 'cmake';
@@ -92,8 +121,7 @@ export class DevFlow {
         const buildTargets = await this.getTargets(buildDir, buildSystem);
         buildTargets.push('oneAPI DevFlow: Exit');
         let isContinue = true;
-        do
-        {
+        do {
             await vscode.window.showQuickPick(buildTargets).then(async selection => {
                 if (!selection) {
                     isContinue = false;
@@ -109,9 +137,8 @@ export class DevFlow {
                     }
                 };
                 if (selection === 'oneAPI DevFlow: Exit') {
-                        isContinue = false;
-                }
-                else {
+                    isContinue = false;
+                } else {
                     switch (buildSystem) {
                         case 'make': {
                             taskConfigValue.command += `make ${selection} -f ${buildDir}/Makefile`;
@@ -126,7 +153,7 @@ export class DevFlow {
                             break;
                         }
                     }
-                
+
                     let config: any = launchConfig['tasks'];
                     if (config === undefined) {
                         config = [taskConfigValue];
@@ -139,13 +166,13 @@ export class DevFlow {
         } while (isContinue);
         return true;
     }
+
     makeLaunchFile(): void {
         const launchConfig = vscode.workspace.getConfiguration('launch');
         const configurations = launchConfig['configurations'];
         configurations.push(debugConfig);
         launchConfig.update('configurations', configurations, false);
         return;
-
     }
     async getTargets(buildDirPath: string, buildSystem: string): Promise<string[]> {
         let targets: string[];
@@ -174,36 +201,4 @@ export class DevFlow {
         }
         return [];
     };
-
-    getEnvironment(fspath: string) {
-        const collection = this.context.environmentVariableCollection;
-        
-        let a = child_process.exec(`bash -c ". ${fspath}  > /dev/null && printenv"`);
-        a.stdout?.on('data', (d: string) => {
-            let vars = d.split('\n');
-            var v1 = {};
-            vars.forEach(l => {
-                //console.log(v);
-                let e = l.indexOf('=');
-                let k = <string> l.substr(0,e);
-                let v = <string> l.substr((e + 1));
-    
-                console.log(`${k} eq ${v}`);
-    
-                if (process.env[k] !== v) {
-                    if (!process.env[k]) {
-                        collection.append(k,v)
-                    } else {
-                        collection.replace(k, v)
-                    }
-                }
-    
-                (process.env as any)[k] = v; // Spooky Magic
-                
-                
-            }); 
-        
-        });
-    
-    }
 }
