@@ -1,9 +1,11 @@
 {
 	"name": "oneapi-devflow",
 	"displayName": "oneapi-devflow",
-	"description": "",
+	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
 	"version": "0.0.2",
-	"publisher": "oneAPI-dev-flow",
+  "license": "MIT",
+	"icon": "media/icon.png",
+	"publisher": "intel-corporation",
 	"engines": {
 		"vscode": "^1.46.0"
 	},
