@@ -3,21 +3,21 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 
 const debugConfig = {
-    name : 'bla',
-    type : 'cppdbg',
-    request:  'launch',
-    program : '${workspaceFolder}/${workspaceFolderBasename}',
-    args : [],
-    stopAtEntry : false,
-    cwd : '${workspaceFolder}',
-    environment : [],
-    externalConsole : false,
+    name: 'bla',
+    type: 'cppdbg',
+    request: 'launch',
+    program: '${workspaceFolder}/${workspaceFolderBasename}',
+    args: [],
+    stopAtEntry: false,
+    cwd: '${workspaceFolder}',
+    environment: [],
+    externalConsole: false,
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    MIMode : 'gdb',
+    MIMode: 'gdb',
     setupCommands:
         [
             {
-                description : 'Enable pretty-printing for gdb',
+                description: 'Enable pretty-printing for gdb',
                 text: '-enable-pretty-printing',
                 ignoreFailures: true
             }
@@ -26,9 +26,9 @@ const debugConfig = {
 
 export class DevFlow {
     terminal: vscode.Terminal | undefined;
-    context:  vscode.ExtensionContext;
+    context: vscode.ExtensionContext;
     collection: vscode.EnvironmentVariableCollection;
-    constructor(c:  vscode.ExtensionContext) {
+    constructor(c: vscode.ExtensionContext) {
         this.context = c;
         this.collection = this.context.environmentVariableCollection;
     }
@@ -49,9 +49,9 @@ export class DevFlow {
         return true; // for unit tests
     }
 
-    async openShellOneAPI() : Promise<void> {
+    async openShellOneAPI(): Promise<void> {
         if (this.terminal === undefined) {
-            this.terminal = vscode.window.createTerminal({name: "Intel oneAPI DevFlow: bash",env: (this.collection as any), strictEnv: true});
+            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: (this.collection as any), strictEnv: true });
         }
         this.terminal.show();
     }
