@@ -120,8 +120,8 @@ export class DevFlow {
             return undefined;
         }
         let buildSystem: string = 'cmake';
-        let buildDir: string = `${workspaceFolder.uri.fsPath}`;
-        if (fs.existsSync(`${workspaceFolder.uri.fsPath}/Makefile`)) {
+        let buildDir: string = `${workspaceFolder?.uri.fsPath}`;
+        if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
             buildSystem = 'make';
         }
         const buildTargets = await this.getTargets(buildDir, buildSystem);
