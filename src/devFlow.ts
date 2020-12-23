@@ -3,35 +3,34 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 
 const debugConfig = {
-    'name': 'bla',
-    'type': 'cppdbg',
-    'request': 'launch',
-    'program': '${workspaceFolder}/${workspaceFolderBasename}',
-    'args': [],
-    'stopAtEntry': false,
-    'cwd': '${workspaceFolder}',
-    'environment': [],
-    'externalConsole': false,
-    "envFile": "${workspaceFolder}/oneAPI.env",
-    'MIMode': 'gdb',
-    'setupCommands':
+    name: 'bla',
+    type: 'cppdbg',
+    request: 'launch',
+    program: '${workspaceFolder}/${workspaceFolderBasename}',
+    args: [],
+    stopAtEntry: false,
+    cwd: '${workspaceFolder}',
+    environment: [],
+    externalConsole: false,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    MIMode: 'gdb',
+    setupCommands:
         [
             {
-                'description': 'Enable pretty-printing for gdb',
-                'text': '-enable-pretty-printing',
-                'ignoreFailures': true,
+                description: 'Enable pretty-printing for gdb',
+                text: '-enable-pretty-printing',
+                ignoreFailures: true
             }
         ]
 };
 
 export class DevFlow {
-    terminal: vscode.Terminal;
-    launchJsonExist: boolean;
+    terminal: vscode.Terminal | undefined;
     context: vscode.ExtensionContext;
+    collection: vscode.EnvironmentVariableCollection;
     constructor(c: vscode.ExtensionContext) {
-        this.terminal = vscode.window.createTerminal();
-        this.launchJsonExist = false;
         this.context = c;
+        this.collection = this.context.environmentVariableCollection;
     }
 
     runExtension(): any {
@@ -43,9 +42,18 @@ export class DevFlow {
         }
         this.checkAndGetEnvironment().then(async () => {
             await this.makeTasksFile(await workspaceFolder);
-            await this.makeLaunchFile();
+            this.makeLaunchFile();
+            await this.openShellOneAPI();
+
         });
         return true; // for unit tests
+    }
+
+    async openShellOneAPI(): Promise<void> {
+        if (this.terminal === undefined) {
+            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: (this.collection as any), strictEnv: true });
+        }
+        this.terminal.show();
     }
 
     async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
@@ -68,7 +76,7 @@ export class DevFlow {
                         canSelectMany: false,
                         openLabel: 'Select',
                         filters: {
-                            'oneAPI setvars file': [process.platform == 'win32' ? 'bat' : 'sh'],
+                            'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
                         }
                     };
                     await vscode.window.showOpenDialog(options).then(fileUri => {
@@ -82,9 +90,7 @@ export class DevFlow {
     }
 
     getEnvironment(fspath: string) {
-        const collection = this.context.environmentVariableCollection;
-
-        let command: string = process.platform == 'win32' ? `"${fspath}" > NULL && set` : `bash -c ". ${fspath}  > /dev/null && printenv"`;
+        let command: string = process.platform === 'win32' ? `"${fspath}" > NULL && set` : `bash -c ". ${fspath}  > /dev/null && printenv"`;
         let a = child_process.exec(command);
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
@@ -99,9 +105,9 @@ export class DevFlow {
 
                 if (process.env[k] !== v) {
                     if (!process.env[k]) {
-                        collection.append(k, v)
+                        this.collection.append(k, v);
                     } else {
-                        collection.replace(k, v)
+                        this.collection.replace(k, v);
                     }
                 }
                 (process.env as any)[k] = v; // Spooky Magic
@@ -110,12 +116,12 @@ export class DevFlow {
     }
 
     async makeTasksFile(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<boolean | undefined> {
-        if (workspaceFolder === undefined) {
+        if (await workspaceFolder === undefined) {
             return undefined;
         }
         let buildSystem: string = 'cmake';
-        let buildDir: string = `${workspaceFolder.uri.fsPath}`;
-        if (fs.existsSync(`${workspaceFolder.uri.fsPath}/Makefile`)) {
+        let buildDir: string = `${workspaceFolder?.uri.fsPath}`;
+        if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
             buildSystem = 'make';
         }
         const buildTargets = await this.getTargets(buildDir, buildSystem);
@@ -174,6 +180,7 @@ export class DevFlow {
         launchConfig.update('configurations', configurations, false);
         return;
     }
+
     async getTargets(buildDirPath: string, buildSystem: string): Promise<string[]> {
         let targets: string[];
         switch (buildSystem) {
