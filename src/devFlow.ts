@@ -159,7 +159,10 @@ export class DevFlow {
                         break;
                     }
                     case 'cmake': {
-                        taskConfigValue.command += `mkdir -p build && cmake -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
+                        let cmd = 'mkdir -p build && cmake  -S . -B build ';
+                        cmd += process.platform === 'win32' ? `-G "NMake Makefiles" && nmake ${selection}` :
+                            `&& cmake --build build && cmake --build build --target ${selection}`;
+                        taskConfigValue.command += cmd;
                         break;
                     }
                     default: {
@@ -267,11 +270,17 @@ export class DevFlow {
             }
             case 'cmake': {
                 targets = ['all', 'clean'];
-                let pathsToCmakeLists = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
+                //finding all CMakeLists.txt in project folder and subfolders
+                let command = process.platform === 'win32' ?
+                    `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
+                    `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+                let pathsToCmakeLists = child_process.execSync(command).toString().split('\n');
+                //parsing CMakeLists.txt to find build targets
                 pathsToCmakeLists.forEach((path) => {
-                    targets = targets.concat(child_process.execSync(
-                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
-                        { cwd: buildDirPath }).toString().split('\n'));
+                    let command = process.platform === 'win32' ?
+                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\((\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
+                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`;
+                    targets = targets.concat(child_process.execSync(command, { cwd: buildDirPath }).toString().split('\n'));
                     targets.pop();
                 });
                 targets = targets.filter(function (item, pos) {
