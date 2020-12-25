@@ -45,7 +45,6 @@ export class DevFlow {
         await this.makeJsonsFiles(workspaceFolder);
         await this.openShellOneAPI();
 
-        return true; // for unit tests
     }
 
     async openShellOneAPI(): Promise<void> {
@@ -59,7 +58,12 @@ export class DevFlow {
         }
 
         if (this.terminal === undefined) {
-            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: (this.collection as any), strictEnv: true });
+            let arr:{[key: string]: string}={};
+            this.collection.forEach( (variable: string, mutator: vscode.EnvironmentVariableMutator, collection: vscode.EnvironmentVariableCollection)=>{
+               let k=mutator.value;
+               arr[variable]=k;
+            });
+            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", shellPath: "C:\\Windows\\System32\\cmd.exe", env: arr, strictEnv: true });
         }
         this.terminal.show();
         await vscode.window.showInformationMessage("Hi, I'm a oneapi terminal. I look a little weird, but I'm really working.\nSergey B will fix me in the next update.\nIn the meantime try to write 'pwd' and find out where you are.", "Ok,I won't be too hard on you");
@@ -93,8 +97,10 @@ export class DevFlow {
         }
     }
 
-    getEnvironment(fspath: string) {
-        let command = process.platform === 'win32' ? `"${fspath}" > NULL && set` : `bash -c ". ${fspath}  > /dev/null && printenv"`;
+    async getEnvironment(fspath: string): Promise<void> {
+        let command = process.platform === 'win32' ?
+            `"${fspath}" > NULL && set` :
+            `bash -c ". ${fspath}  > /dev/null && printenv"`;
         let a = child_process.exec(command);
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
@@ -112,7 +118,7 @@ export class DevFlow {
                         this.collection.replace(k, v);
                     }
                 }
-                (process.env as any)[k] = v; // Spooky Magic
+                //(process.env as any)[k] = v; // Spooky Magic
             });
         });
     }
