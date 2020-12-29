@@ -45,6 +45,7 @@ export class DevFlow {
         await this.makeJsonsFiles(workspaceFolder);
         await this.openShellOneAPI();
 
+        return true; // for unit tests
     }
 
     async openShellOneAPI(): Promise<void> {
@@ -58,12 +59,7 @@ export class DevFlow {
         }
 
         if (this.terminal === undefined) {
-            let arr:{[key: string]: string}={};
-            this.collection.forEach( (variable: string, mutator: vscode.EnvironmentVariableMutator, collection: vscode.EnvironmentVariableCollection)=>{
-               let k=mutator.value;
-               arr[variable]=k;
-            });
-            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", shellPath: "C:\\Windows\\System32\\cmd.exe", env: arr, strictEnv: true });
+            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: this.collection as any, strictEnv: true });
         }
         this.terminal.show();
         await vscode.window.showInformationMessage("Hi, I'm a oneapi terminal. I look a little weird, but I'm really working.\nSergey B will fix me in the next update.\nIn the meantime try to write 'pwd' and find out where you are.", "Ok,I won't be too hard on you");
@@ -97,19 +93,21 @@ export class DevFlow {
         }
     }
 
-    async getEnvironment(fspath: string): Promise<void> {
+    async getEnvironment(fspath: string) {
         let command = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
         let a = child_process.exec(command);
+
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
             vars.forEach(l => {
                 let e = l.indexOf('=');
                 let k = <string>l.substr(0, e);
+                if (k === "") {
+                    return;
+                }
                 let v = <string>l.substr((e + 1));
-
-                console.log(`${k} eq ${v}`);
 
                 if (process.env[k] !== v) {
                     if (!process.env[k]) {
@@ -118,7 +116,7 @@ export class DevFlow {
                         this.collection.replace(k, v);
                     }
                 }
-                //(process.env as any)[k] = v; // Spooky Magic
+                (process.env as any)[k] = v; // Spooky Magic
             });
         });
     }
@@ -165,7 +163,7 @@ export class DevFlow {
                         break;
                     }
                     case 'cmake': {
-                        let cmd = 'mkdir -p build && cmake  -S . -B build ';
+                        let cmd = 'if not exist build mkdir build && cmake  -S . -B build ';
                         cmd += process.platform === 'win32' ? `-G "NMake Makefiles" && nmake ${selection}` :
                             `&& cmake --build build && cmake --build build --target ${selection}`;
                         taskConfigValue.command += cmd;
