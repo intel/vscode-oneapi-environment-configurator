@@ -164,7 +164,8 @@ export class DevFlow {
                     }
                     case 'cmake': {
                         let cmd = 'if not exist build mkdir build && cmake  -S . -B build ';
-                        cmd += process.platform === 'win32' ? `-G "NMake Makefiles" && nmake ${selection}` :
+                        cmd += process.platform === 'win32' ?
+                            `-G "NMake Makefiles" && nmake ${selection}` :
                             `&& cmake --build build && cmake --build build --target ${selection}`;
                         taskConfigValue.command += cmd;
                         break;
