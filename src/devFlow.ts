@@ -97,10 +97,10 @@ export class DevFlow {
     }
 
     async getEnvironment(fspath: string) {
-        let command = process.platform === 'win32' ?
+        let cmd = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
-        let a = child_process.exec(command);
+        let a = child_process.exec(cmd);
 
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
@@ -256,12 +256,15 @@ export class DevFlow {
 
     async getExecNameFromCmake(buildDir: string): Promise<string[]> {
         let execNames: string[] = [];
-        let pathsToCmakeLists = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
+        let cmd = process.platform === 'win32' ?
+            `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
+            `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+        let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
         pathsToCmakeLists.forEach((path) => {
-            let command = process.platform === 'win32' ?
-                `powershell -Command "Select-String -Pattern '\\s*add_executable\\((.*\\s)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
+            let cmd = process.platform === 'win32' ?
+                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\((.*\\s)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
                 `awk '/^ *add_executable/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}' | uniq`;
-            execNames = execNames.concat(child_process.execSync(command, { cwd: buildDir }).toString().split('\n'));
+            execNames = execNames.concat(child_process.execSync(cmd, { cwd: buildDir }).toString().split('\n'));
             execNames.pop();
         });
         return execNames;
@@ -280,16 +283,16 @@ export class DevFlow {
             case 'cmake': {
                 targets = ['all', 'clean'];
 
-                let command = process.platform === 'win32' ?
+                let cmd = process.platform === 'win32' ?
                     `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
                     `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
-                let pathsToCmakeLists = child_process.execSync(command).toString().split('\n');
+                let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
 
                 pathsToCmakeLists.forEach((path) => {
-                    let command = process.platform === 'win32' ?
+                    let cmd = process.platform === 'win32' ?
                         `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\((\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
                         `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}' | uniq`;
-                    targets = targets.concat(child_process.execSync(command, { cwd: buildDirPath }).toString().split('\n'));
+                    targets = targets.concat(child_process.execSync(cmd, { cwd: buildDirPath }).toString().split('\n'));
                     targets.pop();
                 });
                 return targets;
