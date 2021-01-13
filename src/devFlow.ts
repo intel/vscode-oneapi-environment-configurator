@@ -3,7 +3,7 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 
 const debugConfig = {
-    name: 'bla',
+    name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
     type: 'cppdbg',
     request: 'launch',
     program: '${workspaceFolder}/${workspaceFolderBasename}',
@@ -14,6 +14,7 @@ const debugConfig = {
     externalConsole: false,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     MIMode: 'gdb',
+    miDebuggerPath: 'gdb-oneapi',
     setupCommands:
         [
             {
