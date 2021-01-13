@@ -3,7 +3,7 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 
 const debugConfig = {
-    name: 'bla',
+    name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
     type: 'cppdbg',
     request: 'launch',
     program: '${workspaceFolder}/${workspaceFolderBasename}',
@@ -14,6 +14,7 @@ const debugConfig = {
     externalConsole: false,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     MIMode: 'gdb',
+    miDebuggerPath: 'gdb-oneapi',
     setupCommands:
         [
             {
@@ -61,7 +62,7 @@ export class DevFlow {
             this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: (this.collection as any), strictEnv: true });
         }
         this.terminal.show();
-        await vscode.window.showInformationMessage("Hi, I'm a oneapi terminal. I look a little weird, but I'm really working.\nSergey B will fix me in the next update.\nIn the meantime try to write 'pwd' and find out where you are.","Ok,I won't be too hard on you");
+        await vscode.window.showInformationMessage("Hi, I'm a oneapi terminal. I look a little weird, but I'm really working.\nSergey B will fix me in the next update.\nIn the meantime try to write 'pwd' and find out where you are.", "Ok,I won't be too hard on you");
     }
 
     async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
@@ -77,19 +78,17 @@ export class DevFlow {
 
     async checkAndGetEnvironment(): Promise<void> {
         if (!process.env.SETVARS_COMPLETED) {
-            let selection = await vscode.window.showInformationMessage('Provide path to oneAPI setvars file.', 'Select');
-            if (selection === 'Select') {
-                const options: vscode.OpenDialogOptions = {
-                    canSelectMany: false,
-                    openLabel: 'Select',
-                    filters: {
-                        'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
-                    }
-                };
-                let fileUri = await vscode.window.showOpenDialog(options);
-                if (fileUri && fileUri[0]) {
-                    this.getEnvironment(fileUri[0].fsPath);
+            await vscode.window.showInformationMessage("Please provide path to the setvars file");
+            const options: vscode.OpenDialogOptions = {
+                canSelectMany: false,
+                openLabel: 'Select',
+                filters: {
+                    'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
                 }
+            };
+            let fileUri = await vscode.window.showOpenDialog(options);
+            if (fileUri && fileUri[0]) {
+                this.getEnvironment(fileUri[0].fsPath);
             }
         }
     }
