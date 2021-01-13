@@ -49,6 +49,9 @@ export class DevFlow {
     }
 
     async openShellOneAPI(): Promise<void> {
+        if (process.platform === 'win32') {
+            return;
+        }
         let dialogOptions: string[] = ['Yes', 'No'];
         let options: vscode.InputBoxOptions = {
             placeHolder: "Create Intel oneAPI DevFlow terminal?"
@@ -78,7 +81,7 @@ export class DevFlow {
 
     async checkAndGetEnvironment(): Promise<void> {
         if (!process.env.SETVARS_COMPLETED) {
-            await vscode.window.showInformationMessage("Please provide path to the setvars file");
+            vscode.window.showInformationMessage("Please provide path to the setvars file");
             const options: vscode.OpenDialogOptions = {
                 canSelectMany: false,
                 openLabel: 'Select',
@@ -93,17 +96,21 @@ export class DevFlow {
         }
     }
 
-    getEnvironment(fspath: string) {
-        let command = process.platform === 'win32' ? `"${fspath}" > NULL && set` : `bash -c ". ${fspath}  > /dev/null && printenv"`;
-        let a = child_process.exec(command);
+    async getEnvironment(fspath: string) {
+        let cmd = process.platform === 'win32' ?
+            `"${fspath}" > NULL && set` :
+            `bash -c ". ${fspath}  > /dev/null && printenv"`;
+        let a = child_process.exec(cmd);
+
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
             vars.forEach(l => {
                 let e = l.indexOf('=');
                 let k = <string>l.substr(0, e);
+                if (k === "") {
+                    return;
+                }
                 let v = <string>l.substr((e + 1));
-
-                console.log(`${k} eq ${v}`);
 
                 if (process.env[k] !== v) {
                     if (!process.env[k]) {
@@ -159,7 +166,11 @@ export class DevFlow {
                         break;
                     }
                     case 'cmake': {
-                        taskConfigValue.command += `mkdir -p build && cmake -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
+                        let cmd = 'if not exist build mkdir build && cmake  -S . -B build ';
+                        cmd += process.platform === 'win32' ?
+                            `-G "NMake Makefiles" && nmake ${selection}` :
+                            `&& cmake --build build && cmake --build build --target ${selection}`;
+                        taskConfigValue.command += cmd;
                         break;
                     }
                     default: {
@@ -245,11 +256,15 @@ export class DevFlow {
 
     async getExecNameFromCmake(buildDir: string): Promise<string[]> {
         let execNames: string[] = [];
-        let pathsToCmakeLists = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
+        let cmd = process.platform === 'win32' ?
+            `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
+            `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+        let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
         pathsToCmakeLists.forEach((path) => {
-            execNames = execNames.concat(child_process.execSync(
-                `awk '/^ *add_executable/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}'`,
-                { cwd: buildDir }).toString().split('\n'));
+            let cmd = process.platform === 'win32' ?
+                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\((.*\\s)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
+                `awk '/^ *add_executable/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}' | uniq`;
+            execNames = execNames.concat(child_process.execSync(cmd, { cwd: buildDir }).toString().split('\n'));
             execNames.pop();
         });
         return execNames;
@@ -267,15 +282,18 @@ export class DevFlow {
             }
             case 'cmake': {
                 targets = ['all', 'clean'];
-                let pathsToCmakeLists = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
+
+                let cmd = process.platform === 'win32' ?
+                    `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
+                    `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+                let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
+
                 pathsToCmakeLists.forEach((path) => {
-                    targets = targets.concat(child_process.execSync(
-                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`,
-                        { cwd: buildDirPath }).toString().split('\n'));
+                    let cmd = process.platform === 'win32' ?
+                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\((\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
+                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}' | uniq`;
+                    targets = targets.concat(child_process.execSync(cmd, { cwd: buildDirPath }).toString().split('\n'));
                     targets.pop();
-                });
-                targets = targets.filter(function (item, pos) {
-                    return targets.indexOf(item) == pos;
                 });
                 return targets;
             }
