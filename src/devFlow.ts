@@ -49,6 +49,9 @@ export class DevFlow {
     }
 
     async openShellOneAPI(): Promise<void> {
+        if (process.platform === 'win32') {
+            return;
+        }
         let dialogOptions: string[] = ['Yes', 'No'];
         let options: vscode.InputBoxOptions = {
             placeHolder: "Create Intel oneAPI DevFlow terminal?"
@@ -255,9 +258,10 @@ export class DevFlow {
         let execNames: string[] = [];
         let pathsToCmakeLists = child_process.execSync(`find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`).toString().split('\n');
         pathsToCmakeLists.forEach((path) => {
-            execNames = execNames.concat(child_process.execSync(
-                `awk '/^ *add_executable/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}'`,
-                { cwd: buildDir }).toString().split('\n'));
+            let command = process.platform === 'win32' ?
+                `powershell -Command "Select-String -Pattern '\\s*add_executable\\((.*\\s)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
+                `awk '/^ *add_executable/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}' | uniq`;
+            execNames = execNames.concat(child_process.execSync(command, { cwd: buildDir }).toString().split('\n'));
             execNames.pop();
         });
         return execNames;
@@ -275,21 +279,18 @@ export class DevFlow {
             }
             case 'cmake': {
                 targets = ['all', 'clean'];
-                //finding all CMakeLists.txt in project folder and subfolders
+
                 let command = process.platform === 'win32' ?
                     `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
                     `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
                 let pathsToCmakeLists = child_process.execSync(command).toString().split('\n');
-                //parsing CMakeLists.txt to find build targets
+
                 pathsToCmakeLists.forEach((path) => {
                     let command = process.platform === 'win32' ?
                         `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\((\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique"` :
-                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}'`;
+                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}' | uniq`;
                     targets = targets.concat(child_process.execSync(command, { cwd: buildDirPath }).toString().split('\n'));
                     targets.pop();
-                });
-                targets = targets.filter(function (item, pos) {
-                    return targets.indexOf(item) == pos;
                 });
                 return targets;
             }
