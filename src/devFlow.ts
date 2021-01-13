@@ -62,7 +62,7 @@ export class DevFlow {
         }
 
         if (this.terminal === undefined) {
-            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: this.collection as any, strictEnv: true });
+            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: (this.collection as any), strictEnv: true });
         }
         this.terminal.show();
         await vscode.window.showInformationMessage("Hi, I'm a oneapi terminal. I look a little weird, but I'm really working.\nSergey B will fix me in the next update.\nIn the meantime try to write 'pwd' and find out where you are.", "Ok,I won't be too hard on you");
