@@ -81,7 +81,7 @@ export class DevFlow {
 
     async checkAndGetEnvironment(): Promise<void> {
         if (!process.env.SETVARS_COMPLETED) {
-            await vscode.window.showInformationMessage("Please provide path to the setvars file");
+            vscode.window.showInformationMessage("Please provide path to the setvars file");
             const options: vscode.OpenDialogOptions = {
                 canSelectMany: false,
                 openLabel: 'Select',
