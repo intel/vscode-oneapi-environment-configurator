@@ -12,10 +12,6 @@ oneAPI Developer Flow extension supports:
 
 ## Use
 
-* Source oneAPI environment script setvars.sh in the terminal.
-```bash
-source /opt/intel/oneapi/setvars.sh
-```
 * Open a Visual Studio Code project containing Makefile or CMakeLists.txt.
 * Press 'Ctrl+Shift+P' (or View -> Command Palette…) to open VS Code's Command Palette.
 * ????

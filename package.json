@@ -1,6 +1,6 @@
 {
 	"name": "oneapi-devflow",
-	"displayName": "oneapi-devflow",
+	"displayName": "DevFlow for Intel oneAPI Toolkits",
 	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
 	"version": "0.0.4",
   "license": "MIT",
