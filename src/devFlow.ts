@@ -34,38 +34,16 @@ export class DevFlow {
         this.collection = this.context.environmentVariableCollection;
     }
 
-    async runExtension(): Promise<boolean | undefined> {
-        let workspaceFolder = await this.getworkspaceFolder();
-        if (workspaceFolder === undefined) {
-            vscode.window.showErrorMessage("Cannot find the working directory. Please add one or more working directories and try again.");
-            vscode.window.showInformationMessage("Please add one or more working directories and try again.");
-            return undefined; // for unit tests
-        }
-        await this.checkAndGetEnvironment();
-        await this.makeJsonsFiles(workspaceFolder);
-        await this.openShellOneAPI();
-
-        return true; // for unit tests
-    }
-
     async openShellOneAPI(): Promise<void> {
-        if (process.platform === 'win32') {
+        await this.checkAndGetEnvironment();
+        if (process.platform === 'win32') {  // for extraordinary cases
+            await vscode.window.showInformationMessage("This feature is not available for Windows OS","Exit");
             return;
         }
-        let dialogOptions: string[] = ['Yes', 'No'];
-        let options: vscode.InputBoxOptions = {
-            placeHolder: "Create Intel oneAPI DevFlow terminal?"
-        };
-        let selection = await vscode.window.showQuickPick(dialogOptions, options);
-        if (!selection || selection === 'No') {
-            return;
-        }
-
         if (this.terminal === undefined) {
-            this.terminal = vscode.window.createTerminal({ name: "Intel oneAPI DevFlow: bash", env: (this.collection as any), strictEnv: true });
+            this.terminal = vscode.window.createTerminal({ name: "oneAPI: bash", env: (this.collection as any), strictEnv: true });
         }
         this.terminal.show();
-        await vscode.window.showInformationMessage("Hi, I'm a oneapi terminal. I look a little weird, but I'm really working.\nSergey B will fix me in the next update.\nIn the meantime try to write 'pwd' and find out where you are.", "Ok,I won't be too hard on you");
     }
 
     async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
@@ -74,6 +52,8 @@ export class DevFlow {
         }
         let selection = await vscode.window.showWorkspaceFolderPick();
         if (!selection) {
+            vscode.window.showErrorMessage("Cannot find the working directory. Please add one or more working directories and try again.");
+            vscode.window.showInformationMessage("Please add one or more working directories and try again.");
             return undefined; // for unit tests
         }
         return selection;
@@ -81,10 +61,9 @@ export class DevFlow {
 
     async checkAndGetEnvironment(): Promise<void> {
         if (!process.env.SETVARS_COMPLETED) {
-            vscode.window.showInformationMessage("Please provide path to the setvars file");
+            await vscode.window.showInformationMessage("Please provide path to the setvars file", "Ok");
             const options: vscode.OpenDialogOptions = {
                 canSelectMany: false,
-                openLabel: 'Select',
                 filters: {
                     'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
                 }
@@ -124,29 +103,27 @@ export class DevFlow {
         });
     }
 
-    async makeJsonsFiles(workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> {
+    async makeTasksFile(): Promise<boolean> {
+        await this.checkAndGetEnvironment();
         let buildSystem = 'cmake';
+        let workspaceFolder = await this.getworkspaceFolder();
+        if (workspaceFolder === undefined) {
+            return false; // for unit tests
+        }
         let buildDir = `${workspaceFolder?.uri.fsPath}`;
         if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
             buildSystem = 'make';
         }
-        await this.makeTasksFile(buildSystem, buildDir);
-        await this.makeLaunchFile(buildSystem, buildDir);
-        return true;
-    }
-
-    async makeTasksFile(buildSystem: string, buildDir: string): Promise<boolean> {
         const buildTargets = await this.getTargets(buildDir, buildSystem);
-        buildTargets.push('oneAPI DevFlow: Exit');
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
-            placeHolder: "Choose target or click exit"
+            placeHolder: "Choose target or push ESC for exit"
         };
         do {
             let selection = await vscode.window.showQuickPick(buildTargets, options);
             if (!selection) {
                 isContinue = false;
-                return false; // for unit tests
+                return true;
             }
             const taskConfig = vscode.workspace.getConfiguration('tasks');
             let taskConfigValue = {
@@ -157,41 +134,45 @@ export class DevFlow {
                     cwd: `${buildDir}`
                 }
             };
-            if (selection === 'oneAPI DevFlow: Exit') {
-                isContinue = false;
-            } else {
-                switch (buildSystem) {
-                    case 'make': {
-                        taskConfigValue.command += `make ${selection} -f ${buildDir}/Makefile`;
-                        break;
-                    }
-                    case 'cmake': {
-                        let cmd = 'if not exist build mkdir build && cmake  -S . -B build ';
-                        cmd += process.platform === 'win32' ?
-                            `-G "NMake Makefiles" && nmake ${selection}` :
-                            `&& cmake --build build && cmake --build build --target ${selection}`;
-                        taskConfigValue.command += cmd;
-                        break;
-                    }
-                    default: {
-                        isContinue = false;
-                        break;
-                    }
+            switch (buildSystem) {
+                case 'make': {
+                    taskConfigValue.command += `make ${selection} -f ${buildDir}/Makefile`;
+                    break;
                 }
-
-                let config: any = taskConfig['tasks'];
-                if (config === undefined) {
-                    config = [taskConfigValue];
-                } else {
-                    config.push(taskConfigValue);
-                };
-                taskConfig.update('tasks', config, false);
+                case 'cmake': {
+                   let cmd = process.platform === 'win32' ? 
+                    `if not exist build mkdir build && cmake  -S . -B build -G "NMake Makefiles" && nmake ${selection}`:
+                    `mkdir -p build && cmake  -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
+                    taskConfigValue.command += cmd;
+                    break;
+                }
+                default: {
+                    isContinue = false;
+                    break;
+                }
             }
+                    let config: any = taskConfig['tasks'];
+                    if (config === undefined) {
+                        config = [taskConfigValue];
+                    } else {
+                        config.push(taskConfigValue);
+                    };
+                    taskConfig.update('tasks', config, false);
         } while (isContinue);
         return true;
     }
 
-    async makeLaunchFile(buildSystem: string, buildDir: string): Promise<boolean> {
+    async makeLaunchFile(): Promise<boolean> {
+        await this.checkAndGetEnvironment();
+        let buildSystem = 'cmake';
+        let workspaceFolder = await this.getworkspaceFolder();
+        if (workspaceFolder === undefined) {
+            return false; // for unit tests
+        }
+        let buildDir = `${workspaceFolder?.uri.fsPath}`;
+        if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
+            buildSystem = 'make';
+        }
         let execFiles: string[] = [];
         let buldDir = '${workspaceFolder}';
         switch (buildSystem) {
@@ -211,18 +192,13 @@ export class DevFlow {
                 break;
             }
         }
-        execFiles.push('oneAPI DevFlow: Exit');
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
-            placeHolder: "Choose executable or click exit"
+            placeHolder: "Choose executable or click ESC"
         };
         do {
             let selection = await vscode.window.showQuickPick(execFiles, options);
             if (!selection) {
-                isContinue = false;
-                return false; // for unit tests
-            }
-            if (selection === 'oneAPI DevFlow: Exit') {
                 isContinue = false;
                 break;
             }

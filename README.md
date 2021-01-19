@@ -18,8 +18,7 @@ source /opt/intel/oneapi/setvars.sh
 ```
 * Open a Visual Studio Code project containing Makefile or CMakeLists.txt.
 * Press 'Ctrl+Shift+P' (or View -> Command Palette…) to open VS Code's Command Palette.
-* (Optional) Choose **'oneAPI devflow: Run extension'** and then click on **'Get Makefile from Cmake'** if there is no Makefile.
-* Open Command Palette and choose **'Generate Developer Flow'**
+* ????
 * Gonfigure the generated .vscode/launch.json file by specifying the path to executable and the arguments.
 * Generate .vscode/tasks.json file by selecting one of the targets defined in the Makefile.
 * Run the task using via Terminal -> Run Task…
