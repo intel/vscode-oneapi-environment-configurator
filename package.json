@@ -2,7 +2,7 @@
 	"name": "oneapi-devflow",
 	"displayName": "DevFlow for Intel oneAPI Toolkits",
 	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
-	"version": "0.0.4",
+	"version": "0.0.5",
   "license": "MIT",
 	"icon": "media/icon.png",
 	"publisher": "intel-corporation",
@@ -31,7 +31,7 @@
 			},
 			{
 				"command": "oneapi-devflow.openShell",
-				"title": "oneAPI: Open OneAPI Terminal"
+				"title": "oneAPI: Open oneAPI terminal"
 			}
 		]
 	},

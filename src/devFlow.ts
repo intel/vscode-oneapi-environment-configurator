@@ -37,7 +37,7 @@ export class DevFlow {
     async openShellOneAPI(): Promise<void> {
         await this.checkAndGetEnvironment();
         if (process.platform === 'win32') {  // for extraordinary cases
-            await vscode.window.showInformationMessage("This feature is not available for Windows OS","Exit");
+            await vscode.window.showInformationMessage("This feature is not available for Windows OS", "Exit");
             return;
         }
         if (this.terminal === undefined) {
@@ -52,30 +52,55 @@ export class DevFlow {
         }
         let selection = await vscode.window.showWorkspaceFolderPick();
         if (!selection) {
-            vscode.window.showErrorMessage("Cannot find the working directory. Please add one or more working directories and try again.");
+            vscode.window.showErrorMessage("Cannot find the working directory!", { modal: true });
             vscode.window.showInformationMessage("Please add one or more working directories and try again.");
             return undefined; // for unit tests
         }
         return selection;
     }
 
-    async checkAndGetEnvironment(): Promise<void> {
+    async checkAndGetEnvironment(): Promise<boolean | undefined> {
         if (!process.env.SETVARS_COMPLETED) {
-            await vscode.window.showInformationMessage("Please provide path to the setvars file", "Ok");
-            const options: vscode.OpenDialogOptions = {
-                canSelectMany: false,
-                filters: {
-                    'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
-                }
+            let setVarsFileUri;
+            let whereSetVarsOptions: string[] = [];
+            whereSetVarsOptions.push(`Provide setvars.${process.platform === 'win32' ? 'bat' : 'sh'} manually`);
+            if (fs.existsSync(`${process.env.HOME}/intel/oneapi/setvars.sh`)) {
+                whereSetVarsOptions.push(`${process.env.HOME}/intel/oneapi/setvars.sh`);
+            }
+            if (fs.existsSync(`/opt/intel/oneapi/setvars.sh`)) {
+                whereSetVarsOptions.push(`/opt/intel/oneapi/setvars.sh`);
+            }
+
+            let setVarsOptions: vscode.InputBoxOptions = {
+                placeHolder: "Please provide path to the setvars file or push ESC for exit"
             };
-            let fileUri = await vscode.window.showOpenDialog(options);
-            if (fileUri && fileUri[0]) {
-                this.getEnvironment(fileUri[0].fsPath);
+            let selection = await vscode.window.showQuickPick(whereSetVarsOptions, setVarsOptions);
+            if (!selection) {
+                vscode.window.showErrorMessage(`No path specified to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. The oneAPI environment will not be applied.\nThis environment is necessary for oneAPI applications to work correctly!`, { modal: true });
+                return false;
+            }
+            if (selection === `Provide setvars.${process.platform === 'win32' ? 'bat' : 'sh'} manually`) {
+                const options: vscode.OpenDialogOptions = {
+                    canSelectMany: false,
+                    filters: {
+                        'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
+                    }
+                };
+                setVarsFileUri = await vscode.window.showOpenDialog(options);
+                if (setVarsFileUri && setVarsFileUri[0]) {
+                    return this.getEnvironment(setVarsFileUri[0].fsPath);
+                } else {
+                    vscode.window.showErrorMessage(`Path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} invalid, The oneAPI environment was not be applied.\n Please check setvars.${process.platform === 'win32' ? 'bat' : 'sh'} and try again.`, { modal: true });
+                    return false;
+                }
+            } else {
+                return this.getEnvironment(selection);
             }
         }
+        return true;
     }
 
-    async getEnvironment(fspath: string) {
+    async getEnvironment(fspath: string): Promise<boolean> {
         let cmd = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
@@ -101,6 +126,8 @@ export class DevFlow {
                 (process.env as any)[k] = v; // Spooky Magic
             });
         });
+        vscode.window.showInformationMessage("oneAPI environment applied successfully.");
+        return true;
     }
 
     async makeTasksFile(): Promise<boolean> {
@@ -117,7 +144,7 @@ export class DevFlow {
         const buildTargets = await this.getTargets(buildDir, buildSystem);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
-            placeHolder: "Choose target or push ESC for exit"
+            placeHolder: `Choose target from ${buildSystem} or push ESC for exit`
         };
         do {
             let selection = await vscode.window.showQuickPick(buildTargets, options);
@@ -140,9 +167,9 @@ export class DevFlow {
                     break;
                 }
                 case 'cmake': {
-                   let cmd = process.platform === 'win32' ? 
-                    `if not exist build mkdir build && cmake  -S . -B build -G "NMake Makefiles" && nmake ${selection}`:
-                    `mkdir -p build && cmake  -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
+                    let cmd = process.platform === 'win32' ?
+                        `if not exist build mkdir build && cmake  -S . -B build -G "NMake Makefiles" && nmake ${selection}` :
+                        `mkdir -p build && cmake  -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
                     taskConfigValue.command += cmd;
                     break;
                 }
@@ -151,13 +178,14 @@ export class DevFlow {
                     break;
                 }
             }
-                    let config: any = taskConfig['tasks'];
-                    if (config === undefined) {
-                        config = [taskConfigValue];
-                    } else {
-                        config.push(taskConfigValue);
-                    };
-                    taskConfig.update('tasks', config, false);
+            let config: any = taskConfig['tasks'];
+            vscode.window.showInformationMessage(`Task for "${taskConfigValue.label}" was added`);
+            if (config === undefined) {
+                config = [taskConfigValue];
+            } else {
+                config.push(taskConfigValue);
+            };
+            taskConfig.update('tasks', config, false);
         } while (isContinue);
         return true;
     }
@@ -174,27 +202,24 @@ export class DevFlow {
             buildSystem = 'make';
         }
         let execFiles: string[] = [];
-        let buldDir = '${workspaceFolder}';
+        let execFile;
         switch (buildSystem) {
             case 'make': {
-                execFiles = await this.getExecNameManual();
+                vscode.window.showErrorMessage(`Auto-search of the executable file is not available for Makefiles.\nPlease specify the file to run manually.`);
                 break;
             }
             case 'cmake': {
                 execFiles = await this.getExecNameFromCmake(buildDir);
-                if (execFiles.length === 0) {
-                    execFiles = await this.getExecNameManual();
-                }
-                buldDir = `${buldDir}/build/`;
                 break;
             }
             default: {
                 break;
             }
         }
+        execFiles.push(`Provide path to the executable file manually`);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
-            placeHolder: "Choose executable or click ESC"
+            placeHolder: `Choose executable target from ${buildSystem} or push ESC for exit`
         };
         do {
             let selection = await vscode.window.showQuickPick(execFiles, options);
@@ -202,35 +227,32 @@ export class DevFlow {
                 isContinue = false;
                 break;
             }
+
+            if (selection === `Provide path to the executable file manually`) {
+                const options: vscode.OpenDialogOptions = {
+                    canSelectMany: false
+                };
+                let pathToExecFile = await vscode.window.showOpenDialog(options);
+                if (pathToExecFile && pathToExecFile[0]) {
+                    execFile = pathToExecFile[0].fsPath;
+                } else {
+                    vscode.window.showErrorMessage(`Path to the executable file invalid.\nPlease check path and name and try again.`, { modal: true });
+                    return false;
+                }
+            } else {
+                execFile = selection;
+            }
+
             const launchConfig = vscode.workspace.getConfiguration('launch');
             const configurations = launchConfig['configurations'];
-            if (execFiles.length === 0) {
-                await vscode.window.showWarningMessage("Not provided the name of the executable file!");
-                await vscode.window.showInformationMessage("The default name will be used. You can change it in launch.json at any time");
-            }
-            debugConfig.name = `${buildSystem}:${selection.split('/').pop()}`;
-            debugConfig.program = `${buldDir}${selection}`;
+            debugConfig.name = `${buildSystem}:${execFile.split('/').pop()}`;
+            debugConfig.program = `${execFile}`;
             configurations.push(debugConfig);
             launchConfig.update('configurations', configurations, false);
+            vscode.window.showInformationMessage(`Launch configuration "${debugConfig.name}" for "${debugConfig.program}" was added`);
         } while (isContinue);
+        vscode.window.showWarningMessage(`At the moment, debugging is only available on the CPU and FPGA_Emu accelerators.\nOperation on other types of accelerators is not guaranteed.`, { modal: true });
         return true;
-    }
-
-    async getExecNameManual(): Promise<string[]> {
-        let execNames: string[] = [];
-        let options: vscode.InputBoxOptions = {
-            prompt: "Please provide path and name for executable files: ",
-            placeHolder: "path/to/exec;path/to/exec1;path/to;exec2"
-        };
-
-        await vscode.window.showInputBox(options).then(value => {
-            if (!value) {
-                execNames.push('a');
-                return execNames;
-            };
-            execNames = value.toString().split(';');
-        });
-        return execNames;
     }
 
     async getExecNameFromCmake(buildDir: string): Promise<string[]> {
