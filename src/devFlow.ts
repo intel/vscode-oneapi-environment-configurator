@@ -61,31 +61,17 @@ export class DevFlow {
 
     async checkAndGetEnvironment(): Promise<boolean | undefined> {
         if (!process.env.SETVARS_COMPLETED) {
-            let setVarsFileUri;
-            let whereSetVarsOptions: string[] = [];
-            whereSetVarsOptions.push(`Provide setvars.${process.platform === 'win32' ? 'bat' : 'sh'} manually`);
-            if (fs.existsSync(`${process.env.HOME}/intel/oneapi/setvars.sh`)) {
-                whereSetVarsOptions.push(`${process.env.HOME}/intel/oneapi/setvars.sh`);
-            }
-            if (fs.existsSync(`/opt/intel/oneapi/setvars.sh`)) {
-                whereSetVarsOptions.push(`/opt/intel/oneapi/setvars.sh`);
-            }
-
-            let setVarsOptions: vscode.InputBoxOptions = {
-                placeHolder: "Please provide path to the setvars file or push ESC for exit"
-            };
-            let selection = await vscode.window.showQuickPick(whereSetVarsOptions, setVarsOptions);
-            if (!selection) {
-                vscode.window.showErrorMessage(`No path specified to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. The oneAPI environment will not be applied.\nThis environment is necessary for oneAPI applications to work correctly!`, { modal: true });
-                return false;
-            }
-            if (selection === `Provide setvars.${process.platform === 'win32' ? 'bat' : 'sh'} manually`) {
+            let setvarsPath = await this.findSetvarsPath();
+            if (setvarsPath === undefined) {
+                vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
                 const options: vscode.OpenDialogOptions = {
                     canSelectMany: false,
                     filters: {
                         'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
                     }
                 };
+
+                let setVarsFileUri;
                 setVarsFileUri = await vscode.window.showOpenDialog(options);
                 if (setVarsFileUri && setVarsFileUri[0]) {
                     return this.getEnvironment(setVarsFileUri[0].fsPath);
@@ -94,7 +80,8 @@ export class DevFlow {
                     return false;
                 }
             } else {
-                return this.getEnvironment(selection);
+                vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
+                return this.getEnvironment(setvarsPath);
             }
         }
         return true;
@@ -128,6 +115,60 @@ export class DevFlow {
         });
         vscode.window.showInformationMessage("oneAPI environment applied successfully.");
         return true;
+    }
+
+    async findSetvarsPath(): Promise<string | undefined> {
+        // 1.check $PATH for setvars.sh
+        let cmdParsePath = process.platform === 'win32' ?
+            `powershell -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
+            "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
+        let paths = child_process.execSync(cmdParsePath).toString().split('\n');
+        paths.pop();
+        if (paths.length > 0 && paths.length !== 1) {
+            vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
+            let tmp = await vscode.window.showQuickPick(paths);
+            if (tmp) {
+                return tmp;
+            }
+        } else {
+            if (paths.length === 1) {
+                return paths[0] + `/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
+            }
+        }
+        // 2.check in $ONEAPI_ROOT
+        if (fs.existsSync(`${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`)) {
+            return `${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
+        }
+        // 3.check in global installation path
+        let globalSetvarsPath = process.platform === 'win32' ?
+            `${process.env['ProgramFiles(x86)']}\\Intel\\oneAPI\\setvars.bat` :
+            '/opt/intel/oneapi/setvars.sh';
+        if (fs.existsSync(globalSetvarsPath)) {
+            return globalSetvarsPath;
+        }
+        if (process.platform !== 'win32') {
+            {
+                // 4.check in local installation path
+                if (fs.existsSync(`${process.env.HOME}/intel/oneapi/setvars.sh`)) {
+                    return `${process.env.HOME}/intel/oneapi/setvars.sh`;
+                }
+                //5.check in local-custom installation path
+                let paths = child_process.execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
+                paths.pop();
+                if (paths.length > 0 && paths.length !== 1) {
+                    vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
+                    let tmp = await vscode.window.showQuickPick(paths);
+                    if (tmp) {
+                        return tmp;
+                    }
+                } else {
+                    if (paths.length === 1) {
+                        return paths[0];
+                    }
+                }
+            }
+        }
+        return undefined;
     }
 
     async makeTasksFile(): Promise<boolean> {
