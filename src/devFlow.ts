@@ -6,6 +6,8 @@ const debugConfig = {
     name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
     type: 'cppdbg',
     request: 'launch',
+    preLaunchTask: '',
+    postDebugTask: '',
     program: '${workspaceFolder}/${workspaceFolderBasename}',
     args: [],
     stopAtEntry: false,
@@ -220,13 +222,18 @@ export class DevFlow {
                 }
             }
             let config: any = taskConfig['tasks'];
-            vscode.window.showInformationMessage(`Task for "${taskConfigValue.label}" was added`);
             if (config === undefined) {
                 config = [taskConfigValue];
             } else {
+                let isUniq: boolean = await this.checkTaskItem(config, taskConfigValue)
+                if (!isUniq) {
+                    vscode.window.showInformationMessage(`Task for "${taskConfigValue.label}" was skipped as duplicate`);
+                    return false;
+                }
                 config.push(taskConfigValue);
             };
             taskConfig.update('tasks', config, false);
+            vscode.window.showInformationMessage(`Task for "${taskConfigValue.label}" was added`);
         } while (isContinue);
         return true;
     }
@@ -288,11 +295,99 @@ export class DevFlow {
             const configurations = launchConfig['configurations'];
             debugConfig.name = `${buildSystem}:${execFile.split('/').pop()}`;
             debugConfig.program = `${execFile}`;
-            configurations.push(debugConfig);
-            launchConfig.update('configurations', configurations, false);
-            vscode.window.showInformationMessage(`Launch configuration "${debugConfig.name}" for "${debugConfig.program}" was added`);
+            await this.addTasksToLaunchConfig();
+            let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
+            if (isUniq) {
+                configurations.push(debugConfig);
+                launchConfig.update('configurations', configurations, false);
+                vscode.window.showInformationMessage(`Launch configuration "${debugConfig.name}" for "${debugConfig.program}" was added`);
+            } else {
+                vscode.window.showInformationMessage(`Launch configuration "${debugConfig.name}" for "${debugConfig.program}" was skipped as duplicate`);
+                return false;
+            }
         } while (isContinue);
         vscode.window.showWarningMessage(`At the moment, debugging is only available on the CPU and FPGA_Emu accelerators.\nOperation on other types of accelerators is not guaranteed.`, { modal: true });
+        return true;
+    }
+
+    async checkTaskItem(listItems: any, newItem: any): Promise<boolean> {
+        if (listItems.length === 0)
+            return true; // for tests
+        restartcheck:
+        for (var existItem in listItems) {
+            let dialogOptions: string[] = [`Skip target`, `Rename task`];
+            if (newItem.label == listItems[existItem].label) {
+                let options: vscode.InputBoxOptions = {
+                    placeHolder: `Task for target "${newItem.label}" already exist. Do you want to rename current task or skip target?`
+                };
+                let selection = await vscode.window.showQuickPick(dialogOptions, options);
+                if (!selection || selection === `Skip target`) {
+                    return false;
+                }
+                else {
+                    let inputBoxText: vscode.InputBoxOptions = {
+                        placeHolder: "Please provide new task name:"
+                    };
+                    let inputLabel = await vscode.window.showInputBox(inputBoxText);
+                    newItem.label = inputLabel;
+                    continue restartcheck;
+                }
+            }
+        }
+        return true;
+    }
+
+    async checkLaunchItem(listItems: any, newItem: any): Promise<boolean> {
+        if (listItems.length === 0)
+            return true; // for tests
+        restartcheck:
+        for (var existItem in listItems) {
+            let dialogOptions: string[] = [`Skip target`, `Rename configuration`];
+            if (newItem.name == listItems[existItem].name) {
+                let options: vscode.InputBoxOptions = {
+                    placeHolder: `Launch configuration for target "${newItem.name}" already exist. Do you want to rename current configuration or skip target?`
+                };
+                let selection = await vscode.window.showQuickPick(dialogOptions, options);
+                if (!selection || selection === `Skip target `) {
+                    return false;
+                }
+                else {
+                    let inputBoxText: vscode.InputBoxOptions = {
+                        placeHolder: "Please provide new configuration name:"
+                    };
+                    let inputName = await vscode.window.showInputBox(inputBoxText);
+                    newItem.name = inputName;
+                    continue restartcheck;
+                }
+            }
+        }
+        return true;
+    }
+
+    async addTasksToLaunchConfig(): Promise<boolean> {
+        const taskConfig = vscode.workspace.getConfiguration('tasks');
+        let existTasks: any = taskConfig['tasks'];
+        let tasksList: string[] = [];
+        for (var task in existTasks) {
+            tasksList.push(existTasks[task].label);
+        }
+        tasksList.push('Skip adding preLaunchTask');
+        let preLaunchTaskOptions: vscode.InputBoxOptions = {
+            placeHolder: `Choose task for adding to preLaunchTask`
+        };
+        let preLaunchTask = await vscode.window.showQuickPick(tasksList, preLaunchTaskOptions);
+        if (preLaunchTask && preLaunchTask !== 'Skip adding preLaunchTask') {
+            debugConfig.preLaunchTask = preLaunchTask;
+        }
+        tasksList.pop();
+        let postDebugTaskOptions: vscode.InputBoxOptions = {
+            placeHolder: `Choose task for adding to postDebugTask`
+        };
+        tasksList.push('Skip adding postDebugTask');
+        let postDebugTask = await vscode.window.showQuickPick(tasksList, postDebugTaskOptions);
+        if (postDebugTask && postDebugTask !== 'Skip adding postDebugTask') {
+            debugConfig.postDebugTask = postDebugTask;
+        }
         return true;
     }
 
