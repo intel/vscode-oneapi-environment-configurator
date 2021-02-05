@@ -94,16 +94,16 @@ export class DevFlow {
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
         let a = child_process.exec(cmd);
-
+        
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
             vars.forEach(l => {
                 let e = l.indexOf('=');
                 let k = <string>l.substr(0, e);
-                if (k === "") {
+                let v = <string>l.substr((e + 1));
+                if (k === "" || v === "") {
                     return;
                 }
-                let v = <string>l.substr((e + 1));
 
                 if (process.env[k] !== v) {
                     if (!process.env[k]) {
