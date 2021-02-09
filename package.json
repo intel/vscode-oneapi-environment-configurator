@@ -17,7 +17,8 @@
 		"onCommand:oneapi-devflow.generateLaunchJson",
 		"onCommand:oneapi-devflow.generateTaskJson",
 		"onCommand:oneapi-devflow.openShell",
-		"onCommand:oneapi-devflow.setONEAPIenvironment"
+		"onCommand:oneapi-devflow.setONEAPIenvironment",
+		"onCommand:oneapi-devflow.clearEnvironment"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -37,6 +38,10 @@
 			{
 				"command": "oneapi-devflow.setONEAPIenvironment",
 				"title": "oneAPI: Set oneAPI environment"
+			},
+			{
+				"command": "oneapi-devflow.clearEnvironment",
+				"title": "oneAPI: Unset oneAPI environment"
 			}
 		]
 	},
