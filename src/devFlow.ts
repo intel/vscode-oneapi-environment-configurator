@@ -402,8 +402,8 @@ export class DevFlow {
         pathsToCmakeLists.pop();
         pathsToCmakeLists.forEach((path) => {
             let cmd = process.platform === 'win32' ?
-                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\((\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                `awk '/^ *add_executable\\( *[^\$]/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}' | uniq`;
+                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                `awk '/^ *add_executable *\\( *[^\$]/' ${path} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
             execNames = execNames.concat(child_process.execSync(cmd, { cwd: buildDir }).toString().split('\n'));
             execNames.pop();
         });
@@ -430,8 +430,8 @@ export class DevFlow {
                 pathsToCmakeLists.pop();
                 pathsToCmakeLists.forEach((path) => {
                     let cmd = process.platform === 'win32' ?
-                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\((\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}' | uniq`;
+                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
                     targets = targets.concat(child_process.execSync(cmd, { cwd: buildDirPath }).toString().split('\n'));
                     targets.pop();
                 });
