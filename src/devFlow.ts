@@ -88,7 +88,10 @@ export class DevFlow {
         }
         return true;
     }
-
+    async clearEnvironment(): Promise<boolean> {
+        this.collection.clear();
+        return true;
+    }
     async getEnvironment(fspath: string): Promise<boolean> {
         let cmd = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
@@ -112,7 +115,6 @@ export class DevFlow {
                         this.collection.replace(k, v);
                     }
                 }
-                (process.env as any)[k] = v; // Spooky Magic
             });
         });
         vscode.window.showInformationMessage("oneAPI environment applied successfully.");
