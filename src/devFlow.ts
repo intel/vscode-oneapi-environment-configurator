@@ -8,10 +8,10 @@ const debugConfig = {
     request: 'launch',
     preLaunchTask: '',
     postDebugTask: '',
-    program: '${workspaceFolder}/${workspaceFolderBasename}',
+    program: '',
     args: [],
     stopAtEntry: false,
-    cwd: '${workspaceFolder}',
+    cwd: '${workspaceFolder}/build',
     environment: [],
     externalConsole: false,
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -97,7 +97,7 @@ export class DevFlow {
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
         let a = child_process.exec(cmd);
-        
+
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
             vars.forEach(l => {
@@ -290,7 +290,7 @@ export class DevFlow {
                     return false;
                 }
             } else {
-                execFile = selection;
+                execFile = "${workspaceFolder}/build/" + selection;
             }
 
             const launchConfig = vscode.workspace.getConfiguration('launch');
