@@ -8,7 +8,7 @@ const debugConfig = {
     request: 'launch',
     preLaunchTask: '',
     postDebugTask: '',
-    program: '${workspaceFolder}/${workspaceFolderBasename}',
+    program: '',
     args: [],
     stopAtEntry: false,
     cwd: '${workspaceFolder}',
@@ -97,7 +97,7 @@ export class DevFlow {
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
         let a = child_process.exec(cmd);
-        
+
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
             vars.forEach(l => {
@@ -182,11 +182,11 @@ export class DevFlow {
         if (workspaceFolder === undefined) {
             return false; // for unit tests
         }
-        let buildDir = `${workspaceFolder?.uri.fsPath}`;
+        let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
         if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
             buildSystem = 'make';
         }
-        const buildTargets = await this.getTargets(buildDir, buildSystem);
+        const buildTargets = await this.getTargets(projectRootDir, buildSystem);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
             placeHolder: `Choose target from ${buildSystem} or push ESC for exit`
@@ -203,12 +203,12 @@ export class DevFlow {
                 command: ``,
                 type: 'shell',
                 options: {
-                    cwd: `${buildDir}`
+                    cwd: `${projectRootDir}`
                 }
             };
             switch (buildSystem) {
                 case 'make': {
-                    taskConfigValue.command += `make ${selection} -f ${buildDir}/Makefile`;
+                    taskConfigValue.command += `make ${selection} -f ${projectRootDir}/Makefile`;
                     break;
                 }
                 case 'cmake': {
@@ -247,7 +247,7 @@ export class DevFlow {
         if (workspaceFolder === undefined) {
             return false; // for unit tests
         }
-        let buildDir = `${workspaceFolder?.uri.fsPath}`;
+        let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
         if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
             buildSystem = 'make';
         }
@@ -259,7 +259,7 @@ export class DevFlow {
                 break;
             }
             case 'cmake': {
-                execFiles = await this.getExecNameFromCmake(buildDir);
+                execFiles = await this.getExecNameFromCmake(projectRootDir);
                 break;
             }
             default: {
@@ -290,7 +290,8 @@ export class DevFlow {
                     return false;
                 }
             } else {
-                execFile = selection;
+                debugConfig.cwd += '/build';
+                execFile = "${workspaceFolder}/build/" + selection;
             }
 
             const launchConfig = vscode.workspace.getConfiguration('launch');
@@ -393,7 +394,7 @@ export class DevFlow {
         return true;
     }
 
-    async getExecNameFromCmake(buildDir: string): Promise<string[]> {
+    async getExecNameFromCmake(projectRootDir: string): Promise<string[]> {
         let execNames: string[] = [];
         let cmd = process.platform === 'win32' ?
             `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
@@ -402,21 +403,21 @@ export class DevFlow {
         pathsToCmakeLists.pop();
         pathsToCmakeLists.forEach((path) => {
             let cmd = process.platform === 'win32' ?
-                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\((\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                `awk '/^ *add_executable\\( *[^\$]/' ${path} | sed -e's/add_executable(/ /' | awk '{print $1}' | uniq`;
-            execNames = execNames.concat(child_process.execSync(cmd, { cwd: buildDir }).toString().split('\n'));
+                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                `awk '/^ *add_executable *\\( *[^\$]/' ${path} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
+            execNames = execNames.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
             execNames.pop();
         });
         return execNames;
     }
 
-    async getTargets(buildDirPath: string, buildSystem: string): Promise<string[]> {
+    async getTargets(projectRootDir: string, buildSystem: string): Promise<string[]> {
         let targets: string[];
         switch (buildSystem) {
             case 'make': {
                 targets = child_process.execSync(
                     `make -pRrq : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($1 !~ "^[#.]") {print $1}}' | egrep -v '^[^[:alnum:]]' | sort`,
-                    { cwd: buildDirPath }).toString().split('\n');
+                    { cwd: projectRootDir }).toString().split('\n');
                 targets.pop();
                 return targets;
             }
@@ -430,9 +431,9 @@ export class DevFlow {
                 pathsToCmakeLists.pop();
                 pathsToCmakeLists.forEach((path) => {
                     let cmd = process.platform === 'win32' ?
-                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\((\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target(/ /' | awk '{print $1}' | uniq`;
-                    targets = targets.concat(child_process.execSync(cmd, { cwd: buildDirPath }).toString().split('\n'));
+                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
+                    targets = targets.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
                     targets.pop();
                 });
                 return targets;
