@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) Intel Corporation
+ * Licensed under the MIT License. See the project root LICENSE
+ * 
+ * SPDX-License-Identifier: MIT
+ */
+
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';

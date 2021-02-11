@@ -1,7 +1,14 @@
+/**
+ * Copyright (c) Intel Corporation
+ * Licensed under the MIT License. See the project root LICENSE
+ * 
+ * SPDX-License-Identifier: MIT
+ */
+
 import * as vscode from 'vscode';
 import * as devFlow from './devFlow';
 
-let c:  vscode.ExtensionContext;
+let c: vscode.ExtensionContext;
 
 export function activate(context: vscode.ExtensionContext) {
 	c = context;
