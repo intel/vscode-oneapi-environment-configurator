@@ -25,23 +25,23 @@
 		"commands": [
 			{
 				"command": "oneapi-devflow.generateLaunchJson",
-				"title": "oneAPI: Generate launch configurations"
+				"title": "Intel oneAPI: Generate launch configurations"
 			},
 			{
 				"command": "oneapi-devflow.generateTaskJson",
-				"title": "oneAPI: Generate tasks"
+				"title": "Intel oneAPI: Generate tasks"
 			},
 			{
 				"command": "oneapi-devflow.openShell",
-				"title": "oneAPI: Open oneAPI terminal"
+				"title": "Intel oneAPI: Open oneAPI terminal"
 			},
 			{
 				"command": "oneapi-devflow.setONEAPIenvironment",
-				"title": "oneAPI: Set oneAPI environment"
+				"title": "Intel oneAPI: Set oneAPI environment"
 			},
 			{
 				"command": "oneapi-devflow.clearEnvironment",
-				"title": "oneAPI: Unset oneAPI environment"
+				"title": "Intel oneAPI: Unset oneAPI environment"
 			}
 		]
 	},
