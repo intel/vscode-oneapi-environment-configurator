@@ -43,18 +43,6 @@ export class DevFlow {
         this.collection = this.context.environmentVariableCollection;
     }
 
-    async openShellOneAPI(): Promise<void> {
-        await this.checkAndGetEnvironment();
-        if (process.platform === 'win32') {  // for extraordinary cases
-            await vscode.window.showInformationMessage("This feature is not available for Windows OS", "Exit");
-            return;
-        }
-        if (this.terminal === undefined) {
-            this.terminal = vscode.window.createTerminal({ name: "oneAPI: bash", env: (this.collection as any), strictEnv: true });
-        }
-        this.terminal.show();
-    }
-
     async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
         if (vscode.workspace.workspaceFolders?.length === 1) {
             return vscode.workspace.workspaceFolders[0];
@@ -67,7 +55,13 @@ export class DevFlow {
         }
         return selection;
     }
+    async checkTerminals(): Promise<boolean | undefined> {
+        if (vscode.window.terminals !== undefined) {
+            await vscode.window.showInformationMessage(`Please note that all newly created terminals after environment setup will contain oneAPI environment`, { modal: true });
+        }
 
+        return true;
+    }
     async checkAndGetEnvironment(): Promise<boolean | undefined> {
         if (!process.env.SETVARS_COMPLETED) {
             let setvarsPath = await this.findSetvarsPath();
@@ -121,10 +115,12 @@ export class DevFlow {
                     } else {
                         this.collection.replace(k, v);
                     }
+                    (process.env as any)[k] = v; // Spooky Magic
                 }
             });
         });
         vscode.window.showInformationMessage("oneAPI environment applied successfully.");
+        await this.checkTerminals();
         return true;
     }
 

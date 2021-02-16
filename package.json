@@ -14,11 +14,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:oneapi-devflow.generateLaunchJson",
-		"onCommand:oneapi-devflow.generateTaskJson",
-		"onCommand:oneapi-devflow.openShell",
-		"onCommand:oneapi-devflow.setONEAPIenvironment",
-		"onCommand:oneapi-devflow.clearEnvironment"
+		"onStartupFinished"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -30,10 +26,6 @@
 			{
 				"command": "oneapi-devflow.generateTaskJson",
 				"title": "Intel oneAPI: Generate tasks"
-			},
-			{
-				"command": "oneapi-devflow.openShell",
-				"title": "Intel oneAPI: Open oneAPI terminal"
 			},
 			{
 				"command": "oneapi-devflow.setONEAPIenvironment",

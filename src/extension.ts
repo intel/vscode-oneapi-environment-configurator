@@ -15,7 +15,6 @@ export function activate(context: vscode.ExtensionContext) {
 	let devFlofData = new devFlow.DevFlow(c);
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.generateLaunchJson', () => devFlofData.makeLaunchFile()));
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.generateTaskJson', () => devFlofData.makeTasksFile()));
-	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.openShell', () => devFlofData.openShellOneAPI()));
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.setONEAPIenvironment', () => devFlofData.checkAndGetEnvironment()));
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.clearEnvironment', () => devFlofData.clearEnvironment()));
 }
