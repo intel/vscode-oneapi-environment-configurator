@@ -55,15 +55,22 @@ export class DevFlow {
         }
         return selection;
     }
-    async checkTerminals(): Promise<boolean | undefined> {
+
+    async checkExistingTerminals(): Promise<boolean | undefined> {
         if (vscode.window.terminals !== undefined) {
             await vscode.window.showInformationMessage(`Please note that all newly created terminals after environment setup will contain oneAPI environment`, { modal: true });
-        }
-
+        };
         return true;
     }
+
+    async checkNewTerminals(terminal: vscode.Terminal) {
+        if (this.collection.get('SETVARS_COMPLETED')) {
+            vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `Intel oneAPI: ${terminal.name}` });
+        };
+    }
+
     async checkAndGetEnvironment(): Promise<boolean | undefined> {
-        if (!process.env.SETVARS_COMPLETED) {
+        if (!this.collection.get('SETVARS_COMPLETED')) {
             let setvarsPath = await this.findSetvarsPath();
             if (setvarsPath === undefined) {
                 vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
@@ -115,12 +122,11 @@ export class DevFlow {
                     } else {
                         this.collection.replace(k, v);
                     }
-                    (process.env as any)[k] = v; // Spooky Magic
                 }
             });
         });
         vscode.window.showInformationMessage("oneAPI environment applied successfully.");
-        await this.checkTerminals();
+        await this.checkExistingTerminals();
         return true;
     }
 
@@ -230,7 +236,7 @@ export class DevFlow {
             if (config === undefined) {
                 config = [taskConfigValue];
             } else {
-                let isUniq: boolean = await this.checkTaskItem(config, taskConfigValue)
+                let isUniq: boolean = await this.checkTaskItem(config, taskConfigValue);
                 if (!isUniq) {
                     vscode.window.showInformationMessage(`Task for "${taskConfigValue.label}" was skipped as duplicate`);
                     return false;
@@ -317,12 +323,13 @@ export class DevFlow {
     }
 
     async checkTaskItem(listItems: any, newItem: any): Promise<boolean> {
-        if (listItems.length === 0)
+        if (listItems.length === 0) {
             return true; // for tests
+        }
         restartcheck:
         for (var existItem in listItems) {
             let dialogOptions: string[] = [`Skip target`, `Rename task`];
-            if (newItem.label == listItems[existItem].label) {
+            if (newItem.label === listItems[existItem].label) {
                 let options: vscode.InputBoxOptions = {
                     placeHolder: `Task for target "${newItem.label}" already exist. Do you want to rename current task or skip target?`
                 };
@@ -344,12 +351,13 @@ export class DevFlow {
     }
 
     async checkLaunchItem(listItems: any, newItem: any): Promise<boolean> {
-        if (listItems.length === 0)
+        if (listItems.length === 0) {
             return true; // for tests
+        }
         restartcheck:
         for (var existItem in listItems) {
             let dialogOptions: string[] = [`Skip target`, `Rename configuration`];
-            if (newItem.name == listItems[existItem].name) {
+            if (newItem.name === listItems[existItem].name) {
                 let options: vscode.InputBoxOptions = {
                     placeHolder: `Launch configuration for target "${newItem.name}" already exist. Do you want to rename current configuration or skip target?`
                 };
