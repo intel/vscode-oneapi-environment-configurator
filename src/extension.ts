@@ -17,6 +17,10 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.generateTaskJson', () => devFlofData.makeTasksFile()));
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.setONEAPIenvironment', () => devFlofData.checkAndGetEnvironment()));
 	context.subscriptions.push(vscode.commands.registerCommand('oneapi-devflow.clearEnvironment', () => devFlofData.clearEnvironment()));
+
+	vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
+		devFlofData.checkNewTerminals(terminal);
+	});
 }
 
 export function deactivate() {
