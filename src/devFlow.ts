@@ -98,6 +98,7 @@ export class DevFlow {
     }
     async clearEnvironment(): Promise<boolean> {
         this.collection.clear();
+        vscode.window.showInformationMessage("oneAPI environment removed successfully.");
         return true;
     }
     async getEnvironment(fspath: string): Promise<boolean> {
