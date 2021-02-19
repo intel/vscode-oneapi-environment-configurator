@@ -1,6 +1,6 @@
 # Intel oneAPI Environment and Launch Configuration Extension (preview)
 
-#### [Repository](https://github.com/microsoft/vscode-cpptools)|[Issues](https://github.com/microsoft/vscode-cpptools/issues)|[Documentation](https://code.visualstudio.com/docs/languages/cpp)|[Code Samples](https://github.com/microsoft/vscode-cpptools/tree/main/Code%20Samples)
+#### [Repository](??????????) | [Issues](??????????) | [Documentation](https://software.intel.com/content/www/us/en/develop/download/intel-oneapi-programming-guide.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
 Intel oneAPI Environment and Launch Configuration Extension (preview) is a lightweight extension that provides control of the oneAPI development environment for oneAPI and makes it easier to configure oneAPI projects for build, run, and debug.
 ***
