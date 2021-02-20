@@ -24,5 +24,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-	console.log("Intel oneAPI DevFlow: Goodbye");
+	console.log("Intel oneAPI Environment and Launch Configuration Extension (preview): Goodbye");
 }
