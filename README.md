@@ -1,6 +1,6 @@
 # Intel oneAPI Environment and Launch Configuration Extension (preview)
 
-#### [Repository](??????????) | [Issues](??????????) | [Documentation](https://software.intel.com/content/www/us/en/develop/download/intel-oneapi-programming-guide.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
+#### [Repository](localhost) | [Issues](localhost) | [Documentation](https://software.intel.com/content/www/us/en/develop/download/intel-oneapi-programming-guide.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
 Intel oneAPI Environment and Launch Configuration Extension (preview) is a lightweight extension that provides control of the oneAPI development environment for oneAPI and makes it easier to configure oneAPI projects for build, run, and debug.
 ***
