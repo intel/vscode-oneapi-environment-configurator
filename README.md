@@ -1,6 +1,6 @@
 # Intel oneAPI Environment and Launch Configuration Extension (preview)
 
-#### [Repository](??????????) | [Issues](??????????) | [Documentation](https://software.intel.com/content/www/us/en/develop/download/intel-oneapi-programming-guide.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
+#### [Repository]() | [Issues]() | [Documentation](https://software.intel.com/content/www/us/en/develop/download/intel-oneapi-programming-guide.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
 Intel oneAPI Environment and Launch Configuration Extension (preview) is a lightweight extension that provides control of the oneAPI development environment for oneAPI and makes it easier to configure oneAPI projects for build, run, and debug.
 ***
@@ -27,9 +27,10 @@ For more information , see **Intel oneAPI toolkits and components** and **Other 
     - [oneAPI official page](https://software.intel.com/en-us/oneapi)
     - [Intel oneAPI Toolkit Samples](https://github.com/oneapi-src/oneAPI-samples).
 * To get started with oneAPI development may be useful:
+    - [Installing Intel® oneAPI Toolkits via APT](https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html)
     - [Remote Visual Studio Code Development with Intel® oneAPI Toolkits on Linux](https://software.intel.com/content/www/us/en/develop/documentation/remote-vscode-development-on-linux/top.html)
     - [Remote Visual Studio Code Development with oneAPI on Windows Subsystem for Linux](https://software.intel.com/content/www/us/en/develop/documentation/remote-vscode-development-on-wsl/top.html)
-    - ADD MORE
+    - [Using Visual Studio Code with DevCloud](https://devcloud.intel.com/oneapi/documentation/connect-with-vscode/)
 ## Other extensions for oneAPI
 
 - [Sample Browser for Intel oneAPI Toolkits](https://marketplace.visualstudio.com/items?itemName=intel-corporation.oneapi-analyzers-launcher)
