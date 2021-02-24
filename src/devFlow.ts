@@ -200,6 +200,11 @@ export class DevFlow {
         }
         let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
         if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
+            if (process.platform === 'win32')
+            {
+                vscode.window.showInformationMessage(`Working with makefile project is not available for Windows.`, { modal: true });
+                return false;
+            }
             buildSystem = 'make';
         }
         const buildTargets = await this.getTargets(projectRootDir, buildSystem);
@@ -282,6 +287,7 @@ export class DevFlow {
                 break;
             }
         }
+        execFiles.push(`Use fake executable a.out to create a debug template`);
         execFiles.push(`Provide path to the executable file manually`);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
@@ -293,7 +299,11 @@ export class DevFlow {
                 isContinue = false;
                 break;
             }
+            if (selection === `Use fake executable a.out to create a debug template`) {
+                selection = 'a.out';
+                await vscode.window.showInformationMessage(`Note: Launch template cannot be launchd immediately after creation.\nPlease edit the launch.json file ,according to your needs before run.`, { modal: true });
 
+            }
             if (selection === `Provide path to the executable file manually`) {
                 const options: vscode.OpenDialogOptions = {
                     canSelectMany: false
@@ -302,7 +312,7 @@ export class DevFlow {
                 if (pathToExecFile && pathToExecFile[0]) {
                     execFile = pathToExecFile[0].fsPath;
                 } else {
-                    vscode.window.showErrorMessage(`Path to the executable file invalid.\nPlease check path and name and try again.`, { modal: true });
+                    await vscode.window.showErrorMessage(`Path to the executable file invalid.\nPlease check path and name and try again.`, { modal: true });
                     return false;
                 }
             } else {
@@ -312,7 +322,10 @@ export class DevFlow {
 
             const launchConfig = vscode.workspace.getConfiguration('launch');
             const configurations = launchConfig['configurations'];
-            debugConfig.name = `${buildSystem}:${execFile.split('/').pop()}`;
+
+            debugConfig.name = selection === 'a.out' ?
+                `Launch_template` :
+                `${buildSystem}:${execFile.split('/').pop()}`;
             debugConfig.program = `${execFile}`;
             await this.addTasksToLaunchConfig();
             let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
