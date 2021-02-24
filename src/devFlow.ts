@@ -90,7 +90,7 @@ export class DevFlow {
     async checkAndGetEnvironment(): Promise<boolean | undefined> {
         if (!this.collection.get('SETVARS_COMPLETED')) {
             if (!await this.isTerminalAcceptable()) {
-                vscode.window.showErrorMessage("The terminal does not meet the requirements. If you are using PowerShell it must be version 7 or higher");
+                vscode.window.showErrorMessage("The terminal does not meet the requirements. If you are using PowerShell it must be version 7 or higher.");
                 vscode.window.showErrorMessage("oneAPI environment not applied.");
                 return;
             }
