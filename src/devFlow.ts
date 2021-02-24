@@ -68,9 +68,32 @@ export class DevFlow {
             vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `Intel oneAPI: ${terminal.name}` });
         };
     }
+    async isTerminalAcceptable(): Promise<boolean> {
+        try {
+            if (process.platform === 'win32') {
+                const out = child_process.execSync(`powershell -Command "(get-host).version.Major"`).toString();
+                const psVersion = parseInt(out);
+                if (isNaN(psVersion)) {
+                    return false;
+                } else {
+                    return psVersion >= 7 ? true : false;
+                };
+            }
+            return true;
+        }
+        catch (err) {
+            console.error(err);
+            return false;
+        }
+    }
 
     async checkAndGetEnvironment(): Promise<boolean | undefined> {
         if (!this.collection.get('SETVARS_COMPLETED')) {
+            if (!await this.isTerminalAcceptable()) {
+                vscode.window.showErrorMessage("The terminal does not meet the requirements. If you are using PowerShell it must be version 7 or higher");
+                vscode.window.showErrorMessage("oneAPI environment not applied.");
+                return;
+            }
             let setvarsPath = await this.findSetvarsPath();
             if (setvarsPath === undefined) {
                 vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
