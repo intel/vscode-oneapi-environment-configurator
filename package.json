@@ -1,8 +1,8 @@
 {
 	"name": "oneapi-devflow",
-	"displayName": "DevFlow for Intel oneAPI Toolkits",
+	"displayName": "Intel oneAPI Environment and Launch Configuration Extension (preview)",
 	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
-	"version": "0.0.27",
+	"version": "0.0.34",
 	"license": "MIT",
 	"icon": "media/icon.png",
 	"publisher": "intel-corporation",
