@@ -132,57 +132,63 @@ export class DevFlow {
     }
 
     async findSetvarsPath(): Promise<string | undefined> {
-        // 1.check $PATH for setvars.sh
-        let cmdParsePath = process.platform === 'win32' ?
-            `powershell -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
-            "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
-        let paths = child_process.execSync(cmdParsePath).toString().split('\n');
-        paths.pop();
-        if (paths.length > 0 && paths.length !== 1) {
-            vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
-            let tmp = await vscode.window.showQuickPick(paths);
-            if (tmp) {
-                return tmp;
-            }
-        } else {
-            if (paths.length === 1) {
-                return paths[0] + `/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
-            }
-        }
-        // 2.check in $ONEAPI_ROOT
-        if (fs.existsSync(`${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`)) {
-            return `${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
-        }
-        // 3.check in global installation path
-        let globalSetvarsPath = process.platform === 'win32' ?
-            `${process.env['ProgramFiles(x86)']}\\Intel\\oneAPI\\setvars.bat` :
-            '/opt/intel/oneapi/setvars.sh';
-        if (fs.existsSync(globalSetvarsPath)) {
-            return globalSetvarsPath;
-        }
-        if (process.platform !== 'win32') {
-            {
-                // 4.check in local installation path
-                if (fs.existsSync(`${process.env.HOME}/intel/oneapi/setvars.sh`)) {
-                    return `${process.env.HOME}/intel/oneapi/setvars.sh`;
+        try {
+            // 1.check $PATH for setvars.sh
+            let cmdParsePath = process.platform === 'win32' ?
+                `powershell -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
+                "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
+            let paths = child_process.execSync(cmdParsePath).toString().split('\n');
+            paths.pop();
+            if (paths.length > 0 && paths.length !== 1) {
+                vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
+                let tmp = await vscode.window.showQuickPick(paths);
+                if (tmp) {
+                    return tmp;
                 }
-                //5.check in local-custom installation path
-                let paths = child_process.execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
-                paths.pop();
-                if (paths.length > 0 && paths.length !== 1) {
-                    vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
-                    let tmp = await vscode.window.showQuickPick(paths);
-                    if (tmp) {
-                        return tmp;
-                    }
-                } else {
-                    if (paths.length === 1) {
-                        return paths[0];
-                    }
+            } else {
+                if (paths.length === 1) {
+                    return paths[0] + `/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
                 }
             }
+            // 2.check in $ONEAPI_ROOT
+            if (fs.existsSync(`${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`)) {
+                return `${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
+            }
+            // 3.check in global installation path
+            let globalSetvarsPath = process.platform === 'win32' ?
+                `${process.env['ProgramFiles(x86)']}\\Intel\\oneAPI\\setvars.bat` :
+                '/opt/intel/oneapi/setvars.sh';
+            if (fs.existsSync(globalSetvarsPath)) {
+                return globalSetvarsPath;
+            }
+            if (process.platform !== 'win32') {
+                {
+                    // 4.check in local installation path
+                    if (fs.existsSync(`${process.env.HOME}/intel/oneapi/setvars.sh`)) {
+                        return `${process.env.HOME}/intel/oneapi/setvars.sh`;
+                    }
+                    //5.check in local-custom installation path
+                    let paths = child_process.execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
+                    paths.pop();
+                    if (paths.length > 0 && paths.length !== 1) {
+                        vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
+                        let tmp = await vscode.window.showQuickPick(paths);
+                        if (tmp) {
+                            return tmp;
+                        }
+                    } else {
+                        if (paths.length === 1) {
+                            return paths[0];
+                        }
+                    }
+                }
+            }
+            return undefined;
         }
-        return undefined;
+        catch (err) {
+            console.error(err);
+            return undefined;
+        }
     }
 
     async makeTasksFile(): Promise<boolean> {
@@ -407,53 +413,66 @@ export class DevFlow {
     }
 
     async getExecNameFromCmake(projectRootDir: string): Promise<string[]> {
-        let execNames: string[] = [];
-        let cmd = process.platform === 'win32' ?
-            `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
-            `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
-        let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
-        pathsToCmakeLists.pop();
-        pathsToCmakeLists.forEach((path) => {
+        try {
+            let execNames: string[] = [];
             let cmd = process.platform === 'win32' ?
-                `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                `awk '/^ *add_executable *\\( *[^\$]/' ${path} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
-            execNames = execNames.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
-            execNames.pop();
-        });
-        return execNames;
+                `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
+                `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+            let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
+            pathsToCmakeLists.pop();
+            pathsToCmakeLists.forEach((path) => {
+                let cmd = process.platform === 'win32' ?
+                    `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                    `awk '/^ *add_executable *\\( *[^\$]/' ${path} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
+                execNames = execNames.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
+                execNames.pop();
+            });
+
+            return execNames;
+        }
+        catch (err) {
+            console.error(err);
+            return [];
+        }
     }
 
     async getTargets(projectRootDir: string, buildSystem: string): Promise<string[]> {
-        let targets: string[];
-        switch (buildSystem) {
-            case 'make': {
-                targets = child_process.execSync(
-                    `make -pRrq : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($1 !~ "^[#.]") {print $1}}' | egrep -v '^[^[:alnum:]]' | sort`,
-                    { cwd: projectRootDir }).toString().split('\n');
-                targets.pop();
-                return targets;
-            }
-            case 'cmake': {
-                targets = ['all', 'clean'];
-
-                let cmd = process.platform === 'win32' ?
-                    `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
-                    `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
-                let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
-                pathsToCmakeLists.pop();
-                pathsToCmakeLists.forEach((path) => {
-                    let cmd = process.platform === 'win32' ?
-                        `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                        `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
-                    targets = targets.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
+        try {
+            let targets: string[];
+            switch (buildSystem) {
+                case 'make': {
+                    targets = child_process.execSync(
+                        `make -pRrq : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($1 !~ "^[#.]") {print $1}}' | egrep -v '^[^[:alnum:]]' | sort`,
+                        { cwd: projectRootDir }).toString().split('\n');
                     targets.pop();
-                });
-                return targets;
+                    return targets;
+                }
+                case 'cmake': {
+                    targets = ['all', 'clean'];
+
+                    let cmd = process.platform === 'win32' ?
+                        `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
+                        `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+                    let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
+                    pathsToCmakeLists.pop();
+                    pathsToCmakeLists.forEach((path) => {
+                        let cmd = process.platform === 'win32' ?
+                            `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                            `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
+                        targets = targets.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
+                        targets.pop();
+                    });
+                    return targets;
+                }
+                default: {
+                    break;
+                }
             }
-            default: {
-                break;
-            }
+            return [];
         }
-        return [];
+        catch (err) {
+            console.error(err);
+            return [];
+        }
     };
 }
