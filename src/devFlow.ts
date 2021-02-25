@@ -74,7 +74,7 @@ export class DevFlow {
     async isTerminalAcceptable(): Promise<boolean> {
         try {
             if (process.platform === 'win32') {
-                const out = child_process.execSync(`powershell -Command "(get-host).version.Major"`).toString();
+                const out = child_process.execSync(`pwsh -Command "(get-host).version.Major"`).toString();
                 const psVersion = parseInt(out);
                 if (isNaN(psVersion)) {
                     return false;
@@ -162,7 +162,7 @@ export class DevFlow {
         try {
             // 1.check $PATH for setvars.sh
             let cmdParsePath = process.platform === 'win32' ?
-                `powershell -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
+                `pwsh -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
                 "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
             let paths = child_process.execSync(cmdParsePath).toString().split('\n');
             paths.pop();
@@ -227,8 +227,7 @@ export class DevFlow {
         }
         let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
         if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
-            if (process.platform === 'win32')
-            {
+            if (process.platform === 'win32') {
                 vscode.window.showInformationMessage(`Working with makefile project is not available for Windows.`, { modal: true });
                 return false;
             }
@@ -256,12 +255,15 @@ export class DevFlow {
             };
             switch (buildSystem) {
                 case 'make': {
-                    taskConfigValue.command += `make ${selection} -f ${projectRootDir}/Makefile`;
+                    let cmd = process.platform === 'win32' ?
+                        `nmake ${selection} /F ${projectRootDir}/Makefile` :
+                        `make ${selection} -f ${projectRootDir}/Makefile`;
+                    taskConfigValue.command += cmd;
                     break;
                 }
                 case 'cmake': {
                     let cmd = process.platform === 'win32' ?
-                        `if not exist build mkdir build && cmake  -S . -B build -G "NMake Makefiles" && nmake ${selection}` :
+                        `$val=Test-Path -Path 'build'; if($val -ne $true) {New-Item -ItemType directory -Path 'build'}; cmake  -S . -B 'build' -G 'NMake Makefiles'; cd build; nmake ${selection}` :
                         `mkdir -p build && cmake  -S . -B build && cmake --build build && cmake --build build --target ${selection}`;
                     taskConfigValue.command += cmd;
                     break;
@@ -463,7 +465,7 @@ export class DevFlow {
             pathsToCmakeLists.pop();
             pathsToCmakeLists.forEach((path) => {
                 let cmd = process.platform === 'win32' ?
-                    `powershell -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                    `pwsh -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
                     `awk '/^ *add_executable *\\( *[^\$]/' ${path} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
                 execNames = execNames.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
                 execNames.pop();
@@ -498,7 +500,7 @@ export class DevFlow {
                     pathsToCmakeLists.pop();
                     pathsToCmakeLists.forEach((path) => {
                         let cmd = process.platform === 'win32' ?
-                            `powershell -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                            `pwsh -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
                             `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
                         targets = targets.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
                         targets.pop();
