@@ -8,6 +8,9 @@
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
+
+let oneAPIDir: string;
 
 const debugConfig = {
     name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
@@ -107,14 +110,16 @@ export class DevFlow {
                 let setVarsFileUri;
                 setVarsFileUri = await vscode.window.showOpenDialog(options);
                 if (setVarsFileUri && setVarsFileUri[0]) {
-                    return this.getEnvironment(setVarsFileUri[0].fsPath);
+                    oneAPIDir = path.dirname(setVarsFileUri[0].fsPath);
+                    return await this.getEnvironment(setVarsFileUri[0].fsPath);
                 } else {
                     vscode.window.showErrorMessage(`Path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} invalid, The oneAPI environment was not be applied.\n Please check setvars.${process.platform === 'win32' ? 'bat' : 'sh'} and try again.`, { modal: true });
                     return false;
                 }
             } else {
                 vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
-                return this.getEnvironment(setvarsPath);
+                oneAPIDir = path.dirname(setvarsPath);
+                return await this.getEnvironment(setvarsPath);
             }
         }
         return true;
@@ -132,7 +137,7 @@ export class DevFlow {
 
         a.stdout?.on('data', (d: string) => {
             let vars = d.split('\n');
-            vars.forEach(l => {
+            vars.forEach(async (l) => {
                 let e = l.indexOf('=');
                 let k = <string>l.substr(0, e);
                 let v = <string>l.substr((e + 1));
@@ -142,14 +147,13 @@ export class DevFlow {
 
                 if (process.env[k] !== v) {
                     if (!process.env[k]) {
-                        this.collection.append(k, v);
+                        await this.collection.append(k, v);
                     } else {
-                        this.collection.replace(k, v);
+                        await this.collection.replace(k, v);
                     }
                 }
             });
         });
-        vscode.window.showInformationMessage("oneAPI environment applied successfully.");
         await this.checkExistingTerminals();
         return true;
     }
@@ -350,6 +354,7 @@ export class DevFlow {
                 `Launch_template` :
                 `${buildSystem}:${execFile.split('/').pop()}`;
             debugConfig.program = `${execFile}`;
+            debugConfig.miDebuggerPath = path.join(oneAPIDir,'debugger','latest','gdb','intel64','bin','gdb-oneapi');
             await this.addTasksToLaunchConfig();
             let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
             if (isUniq) {
