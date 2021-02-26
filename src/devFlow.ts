@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+'use strict';
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';
@@ -92,7 +93,7 @@ export class DevFlow {
             if (!await this.isTerminalAcceptable()) {
                 vscode.window.showErrorMessage("The terminal does not meet the requirements. If you are using PowerShell it must be version 7 or higher.");
                 vscode.window.showErrorMessage("oneAPI environment not applied.");
-                return;
+                return false;
             }
             let setvarsPath = await this.findSetvarsPath();
             if (setvarsPath === undefined) {
@@ -215,7 +216,9 @@ export class DevFlow {
     }
 
     async makeTasksFile(): Promise<boolean> {
-        await this.checkAndGetEnvironment();
+        if(!await this.checkAndGetEnvironment()){
+            return false;
+        };
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
         if (workspaceFolder === undefined) {
@@ -287,7 +290,9 @@ export class DevFlow {
     }
 
     async makeLaunchFile(): Promise<boolean> {
-        await this.checkAndGetEnvironment();
+        if(!await this.checkAndGetEnvironment()){
+            return false;
+        };
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
         if (workspaceFolder === undefined) {
@@ -301,11 +306,21 @@ export class DevFlow {
         let execFile;
         switch (buildSystem) {
             case 'make': {
-                vscode.window.showErrorMessage(`Auto-search of the executable file is not available for Makefiles.\nPlease specify the file to run manually.`);
+                execFiles = await this.findExecutables();
                 break;
             }
             case 'cmake': {
-                execFiles = await this.getExecNameFromCmake(projectRootDir);
+                execFiles = await this.findExecutables();
+                if (execFiles.length === 0) {
+                    let execNames = await this.getExecNameFromCmake(projectRootDir);
+                    execNames.forEach((name: string) => {
+                        execFiles.push(`${projectRootDir}/build/src/`.concat(name));
+                    });
+                    if (execFiles.length !== 0) {
+                        vscode.window.showInformationMessage(`Could not find executable files.\nThe name of the executable will be taken from CMakeLists.txt, and the executable is expected to be located in /build/src.`);
+                    }
+                }
+
                 break;
             }
             default: {
@@ -316,7 +331,7 @@ export class DevFlow {
         execFiles.push(`Provide path to the executable file manually`);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
-            placeHolder: `Choose executable target from ${buildSystem} or push ESC for exit`
+            placeHolder: `Choose executable target or push ESC for exit`
         };
         do {
             let selection = await vscode.window.showQuickPick(execFiles, options);
@@ -341,8 +356,7 @@ export class DevFlow {
                     return false;
                 }
             } else {
-                debugConfig.cwd += '/build';
-                execFile = "${workspaceFolder}/build/" + selection;
+                execFile = selection;
             }
 
             const launchConfig = vscode.workspace.getConfiguration('launch');
@@ -449,7 +463,20 @@ export class DevFlow {
         }
         return true;
     }
-
+    async findExecutables(): Promise<string[]> {
+        try {
+            const cmd = process.platform === 'win32' ?
+                `pwsh -command "$execName=Get-ChildItem ${vscode.workspace.rootPath} -recurse -include "*.exe" -Name"; if($execName -ne $null){ $execPath='${vscode.workspace.rootPath}'+'/'+$execName; echo $execPath}` :
+                `find ${vscode.workspace.rootPath} -maxdepth 3 -exec file {} \\; | grep -i elf | cut -f1 -d ':'`;
+            let pathsToExecutables = child_process.execSync(cmd).toString().split('\n');
+            pathsToExecutables.pop();
+            return pathsToExecutables;
+        }
+        catch (err) {
+            console.log(err);
+            return [];
+        }
+    }
     async getExecNameFromCmake(projectRootDir: string): Promise<string[]> {
         try {
             let execNames: string[] = [];

@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+'use strict';
 import * as vscode from 'vscode';
 import * as devFlow from './devFlow';
 
