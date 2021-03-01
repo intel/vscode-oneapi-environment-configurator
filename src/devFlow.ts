@@ -263,7 +263,7 @@ export class DevFlow {
             return false; // for unit tests
         }
         let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
-        if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
+        if (fs.existsSync(`${projectRootDir}/Makefile`)) {
             if (process.platform === 'win32') {
                 vscode.window.showInformationMessage(`Working with makefile project is not available for Windows.`, { modal: true });
                 return false;
@@ -337,7 +337,7 @@ export class DevFlow {
             return false; // for unit tests
         }
         let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
-        if (fs.existsSync(`${workspaceFolder?.uri.fsPath}/Makefile`)) {
+        if (fs.existsSync(`${projectRootDir}/Makefile`)) {
             buildSystem = 'make';
         }
         let execFiles: string[] = [];
