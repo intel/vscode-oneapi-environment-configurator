@@ -4,11 +4,13 @@
  * 
  * SPDX-License-Identifier: MIT
  */
-
 'use strict';
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
+
+let oneAPIDir: string;
 
 const debugConfig = {
     name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
@@ -108,14 +110,16 @@ export class DevFlow {
                 let setVarsFileUri;
                 setVarsFileUri = await vscode.window.showOpenDialog(options);
                 if (setVarsFileUri && setVarsFileUri[0]) {
-                    return this.getEnvironment(setVarsFileUri[0].fsPath);
+                    oneAPIDir = path.dirname(setVarsFileUri[0].fsPath);
+                    return await this.getEnvironment(setVarsFileUri[0].fsPath);
                 } else {
                     vscode.window.showErrorMessage(`Path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} invalid, The oneAPI environment was not be applied.\n Please check setvars.${process.platform === 'win32' ? 'bat' : 'sh'} and try again.`, { modal: true });
                     return false;
                 }
             } else {
                 vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
-                return this.getEnvironment(setvarsPath);
+                oneAPIDir = path.dirname(setvarsPath);
+                return await this.getEnvironment(setvarsPath);
             }
         }
         return true;
@@ -129,32 +133,66 @@ export class DevFlow {
         let cmd = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
-        let a = child_process.exec(cmd);
-
-        a.stdout?.on('data', (d: string) => {
-            let vars = d.split('\n');
-            vars.forEach(l => {
-                let e = l.indexOf('=');
-                let k = <string>l.substr(0, e);
-                let v = <string>l.substr((e + 1));
-                if (k === "" || v === "") {
-                    return;
-                }
-
-                if (process.env[k] !== v) {
-                    if (!process.env[k]) {
-                        this.collection.append(k, v);
-                    } else {
-                        this.collection.replace(k, v);
-                    }
-                }
-            });
-        });
-        vscode.window.showInformationMessage("oneAPI environment applied successfully.");
+        await this.getEnvWithProgressBar(cmd);
         await this.checkExistingTerminals();
         return true;
     }
 
+    async getEnvWithProgressBar(cmd: string) {
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Setting up oneAPI environment...",
+            cancellable: true
+        }, async (_progress, token) => {
+            token.onCancellationRequested(() => {
+                return false; // if user click on CANCEL
+            });
+            await this.execSetvarsCatch(token, cmd);
+        });
+    }
+
+    async execSetvarsCatch(token: vscode.CancellationToken, cmd: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (token.isCancellationRequested) {
+                this.collection.clear();
+                return;
+            }
+            let childProcess = child_process.exec(cmd)
+                .on("close", (code, signal) => {
+                    if (code || signal) {
+                        this.collection.clear();
+                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code? code:signal}. oneAPI environment not applied.`);
+                    }
+                    resolve();
+                })
+                .on("error", (err) => {
+                    this.collection.clear();
+                    vscode.window.showErrorMessage(`Something went wrong! \n Error: ${err} oneAPI environment not applied.`);
+                    reject(err);
+                });
+
+            childProcess.stdout?.on("data", (d: string) => {
+                let vars = d.split('\n');
+                vars.forEach(async (l) => {
+                    let e = l.indexOf('=');
+                    let k = <string>l.substr(0, e);
+                    let x = <string>l.substr((e + 1));
+                    let v = x.replace(/(\r)/gm, "");
+                    if (k === "" || v === "") {
+                        return;
+                    }
+                    if (process.env[k] !== v) {
+                        if (!process.env[k]) {
+                            this.collection.append(k, v);
+                        } else {
+                            this.collection.replace(k, v);
+                        }
+                    }
+                });
+            });
+            token.onCancellationRequested(_ => childProcess.kill());
+        });
+    }
     async findSetvarsPath(): Promise<string | undefined> {
         try {
             // 1.check $PATH for setvars.sh
@@ -216,7 +254,7 @@ export class DevFlow {
     }
 
     async makeTasksFile(): Promise<boolean> {
-        if(!await this.checkAndGetEnvironment()){
+        if (!await this.checkAndGetEnvironment()) {
             return false;
         };
         let buildSystem = 'cmake';
@@ -290,7 +328,7 @@ export class DevFlow {
     }
 
     async makeLaunchFile(): Promise<boolean> {
-        if(!await this.checkAndGetEnvironment()){
+        if (!await this.checkAndGetEnvironment()) {
             return false;
         };
         let buildSystem = 'cmake';
@@ -366,6 +404,7 @@ export class DevFlow {
                 `Launch_template` :
                 `${buildSystem}:${execFile.split('/').pop()}`;
             debugConfig.program = `${execFile}`;
+            debugConfig.miDebuggerPath = path.join(oneAPIDir, 'debugger', 'latest', 'gdb', 'intel64', 'bin', 'gdb-oneapi');
             await this.addTasksToLaunchConfig();
             let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
             if (isUniq) {
