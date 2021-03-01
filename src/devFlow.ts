@@ -344,11 +344,11 @@ export class DevFlow {
         let execFile;
         switch (buildSystem) {
             case 'make': {
-                execFiles = await this.findExecutables();
+                execFiles = await this.findExecutables(projectRootDir);
                 break;
             }
             case 'cmake': {
-                execFiles = await this.findExecutables();
+                execFiles = await this.findExecutables(projectRootDir);
                 if (execFiles.length === 0) {
                     let execNames = await this.getExecNameFromCmake(projectRootDir);
                     execNames.forEach((name: string) => {
@@ -502,11 +502,11 @@ export class DevFlow {
         }
         return true;
     }
-    async findExecutables(): Promise<string[]> {
+    async findExecutables(projectRootDir: string): Promise<string[]> {
         try {
             const cmd = process.platform === 'win32' ?
-                `pwsh -command "$execName=Get-ChildItem ${vscode.workspace.rootPath} -recurse -include "*.exe" -Name"; if($execName -ne $null){ $execPath='${vscode.workspace.rootPath}'+'/'+$execName; echo $execPath}` :
-                `find ${vscode.workspace.rootPath} -maxdepth 3 -exec file {} \\; | grep -i elf | cut -f1 -d ':'`;
+                `pwsh -command "$execName=Get-ChildItem ${projectRootDir} -recurse -include "*.exe" -Name"; if($execName -ne $null){ $execPath='${projectRootDir}'+'/'+$execName; echo $execPath}` :
+                `find ${projectRootDir} -maxdepth 3 -exec file {} \\; | grep -i elf | cut -f1 -d ':'`;
             let pathsToExecutables = child_process.execSync(cmd).toString().split('\n');
             pathsToExecutables.pop();
             return pathsToExecutables;
@@ -520,8 +520,8 @@ export class DevFlow {
         try {
             let execNames: string[] = [];
             let cmd = process.platform === 'win32' ?
-                `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
-                `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+                `where /r ${projectRootDir} CMakeLists.txt` :
+                `find ${projectRootDir} -name 'CMakeLists.txt'`;
             let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
             pathsToCmakeLists.pop();
             pathsToCmakeLists.forEach((path) => {
@@ -555,8 +555,8 @@ export class DevFlow {
                     targets = ['all', 'clean'];
 
                     let cmd = process.platform === 'win32' ?
-                        `where /r ${vscode.workspace.rootPath} CMakeLists.txt` :
-                        `find ${vscode.workspace.rootPath} -name 'CMakeLists.txt'`;
+                        `where /r ${projectRootDir} CMakeLists.txt` :
+                        `find ${projectRootDir} -name 'CMakeLists.txt'`;
                     let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
                     pathsToCmakeLists.pop();
                     pathsToCmakeLists.forEach((path) => {
