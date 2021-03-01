@@ -4,7 +4,7 @@
  * 
  * SPDX-License-Identifier: MIT
  */
-
+'use strict';
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';
@@ -95,7 +95,7 @@ export class DevFlow {
             if (!await this.isTerminalAcceptable()) {
                 vscode.window.showErrorMessage("The terminal does not meet the requirements. If you are using PowerShell it must be version 7 or higher.");
                 vscode.window.showErrorMessage("oneAPI environment not applied.");
-                return;
+                return false;
             }
             let setvarsPath = await this.findSetvarsPath();
             if (setvarsPath === undefined) {
@@ -133,31 +133,66 @@ export class DevFlow {
         let cmd = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
-        let a = child_process.exec(cmd);
-
-        a.stdout?.on('data', (d: string) => {
-            let vars = d.split('\n');
-            vars.forEach(async (l) => {
-                let e = l.indexOf('=');
-                let k = <string>l.substr(0, e);
-                let v = <string>l.substr((e + 1));
-                if (k === "" || v === "") {
-                    return;
-                }
-
-                if (process.env[k] !== v) {
-                    if (!process.env[k]) {
-                        await this.collection.append(k, v);
-                    } else {
-                        await this.collection.replace(k, v);
-                    }
-                }
-            });
-        });
+        await this.getEnvWithProgressBar(cmd);
         await this.checkExistingTerminals();
         return true;
     }
 
+    async getEnvWithProgressBar(cmd: string) {
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Setting up oneAPI environment...",
+            cancellable: true
+        }, async (_progress, token) => {
+            token.onCancellationRequested(() => {
+                return false; // if user click on CANCEL
+            });
+            await this.execSetvarsCatch(token, cmd);
+        });
+    }
+
+    async execSetvarsCatch(token: vscode.CancellationToken, cmd: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (token.isCancellationRequested) {
+                this.collection.clear();
+                return;
+            }
+            let childProcess = child_process.exec(cmd)
+                .on("close", (code, signal) => {
+                    if (code || signal) {
+                        this.collection.clear();
+                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code? code:signal}. oneAPI environment not applied.`);
+                    }
+                    resolve();
+                })
+                .on("error", (err) => {
+                    this.collection.clear();
+                    vscode.window.showErrorMessage(`Something went wrong! \n Error: ${err} oneAPI environment not applied.`);
+                    reject(err);
+                });
+
+            childProcess.stdout?.on("data", (d: string) => {
+                let vars = d.split('\n');
+                vars.forEach(async (l) => {
+                    let e = l.indexOf('=');
+                    let k = <string>l.substr(0, e);
+                    let x = <string>l.substr((e + 1));
+                    let v = x.replace(/(\r)/gm, "");
+                    if (k === "" || v === "") {
+                        return;
+                    }
+                    if (process.env[k] !== v) {
+                        if (!process.env[k]) {
+                            this.collection.append(k, v);
+                        } else {
+                            this.collection.replace(k, v);
+                        }
+                    }
+                });
+            });
+            token.onCancellationRequested(_ => childProcess.kill());
+        });
+    }
     async findSetvarsPath(): Promise<string | undefined> {
         try {
             // 1.check $PATH for setvars.sh
@@ -219,7 +254,9 @@ export class DevFlow {
     }
 
     async makeTasksFile(): Promise<boolean> {
-        await this.checkAndGetEnvironment();
+        if (!await this.checkAndGetEnvironment()) {
+            return false;
+        };
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
         if (workspaceFolder === undefined) {
@@ -291,7 +328,9 @@ export class DevFlow {
     }
 
     async makeLaunchFile(): Promise<boolean> {
-        await this.checkAndGetEnvironment();
+        if (!await this.checkAndGetEnvironment()) {
+            return false;
+        };
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
         if (workspaceFolder === undefined) {
@@ -305,11 +344,21 @@ export class DevFlow {
         let execFile;
         switch (buildSystem) {
             case 'make': {
-                vscode.window.showErrorMessage(`Auto-search of the executable file is not available for Makefiles.\nPlease specify the file to run manually.`);
+                execFiles = await this.findExecutables();
                 break;
             }
             case 'cmake': {
-                execFiles = await this.getExecNameFromCmake(projectRootDir);
+                execFiles = await this.findExecutables();
+                if (execFiles.length === 0) {
+                    let execNames = await this.getExecNameFromCmake(projectRootDir);
+                    execNames.forEach((name: string) => {
+                        execFiles.push(`${projectRootDir}/build/src/`.concat(name));
+                    });
+                    if (execFiles.length !== 0) {
+                        vscode.window.showInformationMessage(`Could not find executable files.\nThe name of the executable will be taken from CMakeLists.txt, and the executable is expected to be located in /build/src.`);
+                    }
+                }
+
                 break;
             }
             default: {
@@ -320,7 +369,7 @@ export class DevFlow {
         execFiles.push(`Provide path to the executable file manually`);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
-            placeHolder: `Choose executable target from ${buildSystem} or push ESC for exit`
+            placeHolder: `Choose executable target or push ESC for exit`
         };
         do {
             let selection = await vscode.window.showQuickPick(execFiles, options);
@@ -345,8 +394,7 @@ export class DevFlow {
                     return false;
                 }
             } else {
-                debugConfig.cwd += '/build';
-                execFile = "${workspaceFolder}/build/" + selection;
+                execFile = selection;
             }
 
             const launchConfig = vscode.workspace.getConfiguration('launch');
@@ -356,7 +404,7 @@ export class DevFlow {
                 `Launch_template` :
                 `${buildSystem}:${execFile.split('/').pop()}`;
             debugConfig.program = `${execFile}`;
-            debugConfig.miDebuggerPath = path.join(oneAPIDir,'debugger','latest','gdb','intel64','bin','gdb-oneapi');
+            debugConfig.miDebuggerPath = path.join(oneAPIDir, 'debugger', 'latest', 'gdb', 'intel64', 'bin', 'gdb-oneapi');
             await this.addTasksToLaunchConfig();
             let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
             if (isUniq) {
@@ -454,7 +502,20 @@ export class DevFlow {
         }
         return true;
     }
-
+    async findExecutables(): Promise<string[]> {
+        try {
+            const cmd = process.platform === 'win32' ?
+                `pwsh -command "$execName=Get-ChildItem ${vscode.workspace.rootPath} -recurse -include "*.exe" -Name"; if($execName -ne $null){ $execPath='${vscode.workspace.rootPath}'+'/'+$execName; echo $execPath}` :
+                `find ${vscode.workspace.rootPath} -maxdepth 3 -exec file {} \\; | grep -i elf | cut -f1 -d ':'`;
+            let pathsToExecutables = child_process.execSync(cmd).toString().split('\n');
+            pathsToExecutables.pop();
+            return pathsToExecutables;
+        }
+        catch (err) {
+            console.log(err);
+            return [];
+        }
+    }
     async getExecNameFromCmake(projectRootDir: string): Promise<string[]> {
         try {
             let execNames: string[] = [];
