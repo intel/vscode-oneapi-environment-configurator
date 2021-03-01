@@ -505,9 +505,9 @@ export class DevFlow {
     async findExecutables(projectRootDir: string): Promise<string[]> {
         try {
             const cmd = process.platform === 'win32' ?
-                `pwsh -command "$execName=Get-ChildItem ${projectRootDir} -recurse -include "*.exe" -Name"; if($execName -ne $null){ $execPath='${projectRootDir}'+'/'+$execName; echo $execPath}` :
+                `pwsh -command "Get-ChildItem '${projectRootDir}' -recurse -Depth 3 -include '*.exe' -Name | ForEach-Object -Process {$execPath='${projectRootDir}' +'\\'+ $_;echo $execPath}"` :
                 `find ${projectRootDir} -maxdepth 3 -exec file {} \\; | grep -i elf | cut -f1 -d ':'`;
-            let pathsToExecutables = child_process.execSync(cmd).toString().split('\n');
+            let pathsToExecutables = child_process.execSync(cmd).toString().replace('\r','').split('\n');
             pathsToExecutables.pop();
             return pathsToExecutables;
         }
