@@ -6,7 +6,7 @@ Environment and Launch Configurator for Intel oneAPI Toolkits is a lightweight e
 ***
 ## Use
 Before you start, make sure that you have oneAPI BaseKit or other installed.
-Note: To use the environment features in Windows, you need to have PowerShell 7 or higher
+Note: To use the environment features in Windows, you need to have PowerShell 7 or higher.
 For more information , see **Intel oneAPI toolkits and components** and **Other extensions for oneAPI**.
 - Access from Command Palette:
     * Press `Ctrl+Shift+P` ( or `View -> Command Palette…` ) and type Intel oneAPI.

@@ -10,7 +10,7 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-let oneAPIDir: string;
+let oneAPIDir: string = '';
 
 const debugConfig = {
     name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
@@ -126,6 +126,7 @@ export class DevFlow {
     }
     async clearEnvironment(): Promise<boolean> {
         this.collection.clear();
+        oneAPIDir = '';
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
         return true;
     }
@@ -161,7 +162,7 @@ export class DevFlow {
                 .on("close", (code, signal) => {
                     if (code || signal) {
                         this.collection.clear();
-                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code? code:signal}. oneAPI environment not applied.`);
+                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code ? code : signal}. oneAPI environment not applied.`);
                     }
                     resolve();
                 })
@@ -176,8 +177,8 @@ export class DevFlow {
                 vars.forEach(async (l) => {
                     let e = l.indexOf('=');
                     let k = <string>l.substr(0, e);
-                    let x = <string>l.substr((e + 1));
-                    let v = x.replace(/(\r)/gm, "");
+                    let v = <string>l.substr((e + 1)).replace(`\r`, "");
+                    
                     if (k === "" || v === "") {
                         return;
                     }
@@ -201,6 +202,10 @@ export class DevFlow {
                 "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
             let paths = child_process.execSync(cmdParsePath).toString().split('\n');
             paths.pop();
+            paths.forEach(async function (onePath, index, pathList) {
+                pathList[index] = path.posix.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(path.posix.sep);;
+            });
+
             if (paths.length > 0 && paths.length !== 1) {
                 vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
                 let tmp = await vscode.window.showQuickPick(paths);
@@ -209,7 +214,7 @@ export class DevFlow {
                 }
             } else {
                 if (paths.length === 1) {
-                    return paths[0] + `/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
+                    return path.join(paths[0], `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
                 }
             }
             // 2.check in $ONEAPI_ROOT
@@ -230,6 +235,7 @@ export class DevFlow {
                         return `${process.env.HOME}/intel/oneapi/setvars.sh`;
                     }
                     //5.check in local-custom installation path
+                    //Path does not require normalization because it is generated only for Linux
                     let paths = child_process.execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
                     paths.pop();
                     if (paths.length > 0 && paths.length !== 1) {
@@ -287,7 +293,7 @@ export class DevFlow {
                 command: ``,
                 type: 'shell',
                 options: {
-                    cwd: `${projectRootDir}`
+                    cwd: `${projectRootDir}`.split(/[\\\/]/g).join(path.posix.sep)
                 }
             };
             switch (buildSystem) {
@@ -328,9 +334,12 @@ export class DevFlow {
     }
 
     async makeLaunchFile(): Promise<boolean> {
-        if (!await this.checkAndGetEnvironment()) {
-            return false;
-        };
+        if (!oneAPIDir) {
+            this.collection.clear();
+            if (!await this.checkAndGetEnvironment()) {
+                return false;
+            };
+        }
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
         if (workspaceFolder === undefined) {
@@ -351,8 +360,8 @@ export class DevFlow {
                 execFiles = await this.findExecutables(projectRootDir);
                 if (execFiles.length === 0) {
                     let execNames = await this.getExecNameFromCmake(projectRootDir);
-                    execNames.forEach((name: string) => {
-                        execFiles.push(`${projectRootDir}/build/src/`.concat(name));
+                    execNames.forEach(async (name: string) => {
+                        execFiles.push(path.join(`${projectRootDir}`, `build`, `src`, name));
                     });
                     if (execFiles.length !== 0) {
                         vscode.window.showInformationMessage(`Could not find executable files.\nThe name of the executable will be taken from CMakeLists.txt, and the executable is expected to be located in /build/src.`);
@@ -402,9 +411,12 @@ export class DevFlow {
 
             debugConfig.name = selection === 'a.out' ?
                 `Launch_template` :
-                `${buildSystem}:${execFile.split('/').pop()}`;
-            debugConfig.program = `${execFile}`;
-            debugConfig.miDebuggerPath = path.join(oneAPIDir, 'debugger', 'latest', 'gdb', 'intel64', 'bin', 'gdb-oneapi');
+                `(gdb-oneapi) ${path.parse(execFile).base} Launch`;
+            debugConfig.program = `${execFile}`.split(/[\\\/]/g).join(path.posix.sep);;
+
+            let pathToGDB = path.join(oneAPIDir, 'debugger', 'latest', 'gdb', 'intel64', 'bin', process.platform === 'win32' ? 'gdb-oneapi.exe' : 'gdb-oneapi');
+            //This is the only known way to replace \\ with /
+            debugConfig.miDebuggerPath = path.posix.normalize(pathToGDB).split(/[\\\/]/g).join(path.posix.sep);
             await this.addTasksToLaunchConfig();
             let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
             if (isUniq) {
@@ -507,8 +519,12 @@ export class DevFlow {
             const cmd = process.platform === 'win32' ?
                 `pwsh -command "Get-ChildItem '${projectRootDir}' -recurse -Depth 3 -include '*.exe' -Name | ForEach-Object -Process {$execPath='${projectRootDir}' +'\\'+ $_;echo $execPath}"` :
                 `find ${projectRootDir} -maxdepth 3 -exec file {} \\; | grep -i elf | cut -f1 -d ':'`;
-            let pathsToExecutables = child_process.execSync(cmd).toString().replace('\r','').split('\n');
+            let pathsToExecutables = child_process.execSync(cmd).toString().split('\n');
             pathsToExecutables.pop();
+            pathsToExecutables.forEach(async function (onePath, index, execList) {
+                //This is the only known way to replace \\ with /
+                execList[index] = path.posix.normalize(onePath.replace('\r','')).split(/[\\\/]/g).join(path.posix.sep);
+            });
             return pathsToExecutables;
         }
         catch (err) {
@@ -524,12 +540,16 @@ export class DevFlow {
                 `find ${projectRootDir} -name 'CMakeLists.txt'`;
             let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
             pathsToCmakeLists.pop();
-            pathsToCmakeLists.forEach((path) => {
+            pathsToCmakeLists.forEach(async (onePath) => {
+                let normalizedPath = path.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(path.posix.sep);
                 let cmd = process.platform === 'win32' ?
-                    `pwsh -Command "$execNames=(gc ${path}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                    `awk '/^ *add_executable *\\( *[^\$]/' ${path} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
+                    `pwsh -Command "$execNames=(gc ${normalizedPath}) | Select-String -Pattern '\\s*add_executable\\s*\\(\\s*(\\w*)' ; $execNames.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                    `awk '/^ *add_executable *\\( *[^\$]/' ${normalizedPath} | sed -e's/add_executable *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
                 execNames = execNames.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
                 execNames.pop();
+                execNames.forEach(async function (oneExec, index, execList) {
+                    execList[index] = path.normalize(oneExec.replace(`\r`, "")).split(/[\\\/]/g).join(path.posix.sep);
+                });
             });
 
             return execNames;
@@ -559,12 +579,16 @@ export class DevFlow {
                         `find ${projectRootDir} -name 'CMakeLists.txt'`;
                     let pathsToCmakeLists = child_process.execSync(cmd).toString().split('\n');
                     pathsToCmakeLists.pop();
-                    pathsToCmakeLists.forEach((path) => {
+                    pathsToCmakeLists.forEach(async (onePath) => {
+                        let normalizedPath = path.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(path.posix.sep);
                         let cmd = process.platform === 'win32' ?
-                            `pwsh -Command "$targets=(gc ${path}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
-                            `awk '/^ *add_custom_target/' ${path} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
+                            `pwsh -Command "$targets=(gc ${normalizedPath}) | Select-String -Pattern '\\s*add_custom_target\\s*\\(\\s*(\\w*)' ; $targets.Matches | ForEach-Object -Process {echo $_.Groups[1].Value} | Select-Object -Unique | ? {$_.trim() -ne '' } "` :
+                            `awk '/^ *add_custom_target/' ${normalizedPath} | sed -e's/add_custom_target *(/ /; s/\\r/ /' | awk '{print $1}' | uniq`;
                         targets = targets.concat(child_process.execSync(cmd, { cwd: projectRootDir }).toString().split('\n'));
                         targets.pop();
+                        targets.forEach(async function (oneTarget, index, targetList) {
+                            targetList[index] = path.posix.normalize(oneTarget.replace(`\r`, ""));
+                        });
                     });
                     return targets;
                 }
