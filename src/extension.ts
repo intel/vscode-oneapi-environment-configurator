@@ -25,5 +25,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-	console.log("Intel oneAPI Environment and Launch Configuration Extension (preview): Goodbye");
+	console.log("Environment and Launch Configurator for Intel oneAPI Toolkits (preview): Goodbye");
 }
