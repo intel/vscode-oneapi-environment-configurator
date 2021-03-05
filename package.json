@@ -1,8 +1,8 @@
 {
-	"name": "oneapi-devflow",
+	"name": "oneapi-configurator",
 	"displayName": "Environment and Launch Configurator for Intel oneAPI Toolkits (preview)",
 	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
-	"version": "0.0.42",
+	"version": "0.0.46",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
@@ -20,19 +20,19 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "oneapi-devflow.generateLaunchJson",
+				"command": "intel.oneAPIСonfigurator.generateLaunchJson",
 				"title": "Intel oneAPI: Generate launch configurations"
 			},
 			{
-				"command": "oneapi-devflow.generateTaskJson",
+				"command": "intel.oneAPIСonfigurator.generateTaskJson",
 				"title": "Intel oneAPI: Generate tasks"
 			},
 			{
-				"command": "oneapi-devflow.setONEAPIenvironment",
+				"command": "intel.oneAPIСonfigurator.setONEAPIenvironment",
 				"title": "Intel oneAPI: Set oneAPI environment"
 			},
 			{
-				"command": "oneapi-devflow.clearEnvironment",
+				"command": "intel.oneAPIСonfigurator.clearEnvironment",
 				"title": "Intel oneAPI: Unset oneAPI environment"
 			}
 		]
@@ -60,6 +60,5 @@
 		"vscode-test": "^1.4.0",
 		"vsce": "^1.81.1"
 	},
-	"dependencies": {
-	}
+	"dependencies": {}
 }
