@@ -374,7 +374,7 @@ export class DevFlow {
                 break;
             }
         }
-        execFiles.push(`Use fake executable a.out to create a debug template`);
+        execFiles.push(`Put temporal target path "a.out" to replace it later with correct path manually`);
         execFiles.push(`Provide path to the executable file manually`);
         let isContinue = true;
         let options: vscode.InputBoxOptions = {
@@ -386,9 +386,9 @@ export class DevFlow {
                 isContinue = false;
                 break;
             }
-            if (selection === `Use fake executable a.out to create a debug template`) {
+            if (selection === `Put temporal target path "a.out" to replace it later with correct path manually`) {
                 selection = 'a.out';
-                await vscode.window.showInformationMessage(`Note: Launch template cannot be launchd immediately after creation.\nPlease edit the launch.json file ,according to your needs before run.`, { modal: true });
+                await vscode.window.showInformationMessage(`Note: Launch template cannot be launched immediately after creation.\nPlease edit the launch.json file according to your needs before run.`, { modal: true });
 
             }
             if (selection === `Provide path to the executable file manually`) {
