@@ -155,7 +155,7 @@ describe('DevFlow extension UI Tests', function () {
                 await workbench.executeCommand('Intel oneAPI: Generate launch configurations');
                 await driver.sleep(1000);
                 let input = new InputBox();
-                let pick = await input.findQuickPick('Use fake executable a.out to create a debug template');
+                let pick = await input.findQuickPick('Put temporal target path "a.out" to replace it later with correct path manually');
                 await input.cancel();
                 // close warning about debugging
                 const dialog = new ModalDialog();
@@ -169,7 +169,7 @@ describe('DevFlow extension UI Tests', function () {
                 workbench.executeCommand('Intel oneAPI: Generate launch configurations');
                 await driver.sleep(1000);
                 let input = new InputBox();
-                await input.selectQuickPick('Use fake executable a.out to create a debug template');
+                await input.selectQuickPick('Put temporal target path "a.out" to replace it later with correct path manually');
                 // close note about debugging launch template
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
