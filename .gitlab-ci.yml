@@ -14,6 +14,8 @@ build:
   script:
     - yarn && yarn compile
     - yarn package
+  only:
+    - merge_requests    
   artifacts:
     paths:
       - "*.vsix"
