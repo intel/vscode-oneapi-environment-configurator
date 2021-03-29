@@ -4,13 +4,13 @@
  * 
  * SPDX-License-Identifier: MIT
  */
+
 'use strict';
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-
-let oneAPIDir: string = '';
+import { MultiRootEnv } from './multiRootEnv';
 
 const debugConfig = {
     name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
@@ -36,16 +36,27 @@ const debugConfig = {
             }
         ]
 };
-
 export class DevFlow {
     terminal: vscode.Terminal | undefined;
     context: vscode.ExtensionContext;
     collection: vscode.EnvironmentVariableCollection;
+    multiroot: MultiRootEnv | undefined;
     constructor(c: vscode.ExtensionContext) {
+        this.multiroot = vscode.workspace.workspaceFile !== undefined ? new MultiRootEnv(c.workspaceState, c.environmentVariableCollection) : undefined;
+        if (this.multiroot) {
+            c.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(event => {
+                for (let folder of event.added) {
+                    this.multiroot?.addEnv(folder.uri.toString());
+                }
+                for (let folder of event.removed) {
+                    this.multiroot?.removeEnv(folder.uri.toString());
+                }
+            }));
+            c.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.switchEnv', () => this.multiroot?.switchEnv()));
+        }
         this.context = c;
         this.collection = this.context.environmentVariableCollection;
     }
-
     async getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
         if (vscode.workspace.workspaceFolders?.length === 1) {
             return vscode.workspace.workspaceFolders[0];
@@ -58,7 +69,6 @@ export class DevFlow {
         }
         return selection;
     }
-
     async checkExistingTerminals(): Promise<boolean | undefined> {
         if (vscode.window.terminals !== undefined) {
             await vscode.window.showInformationMessage(`Please note that all newly created terminals after environment setup will contain oneAPI environment`, { modal: true });
@@ -71,6 +81,7 @@ export class DevFlow {
             vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `Intel oneAPI: ${terminal.name}` });
         };
     }
+
     async isTerminalAcceptable(): Promise<boolean> {
         try {
             if (process.platform === 'win32') {
@@ -90,7 +101,17 @@ export class DevFlow {
         }
     }
 
+
     async checkAndGetEnvironment(): Promise<boolean | undefined> {
+        if (this.multiroot) {
+            if (!this.multiroot.activeDir) {
+                vscode.window.showInformationMessage("Select the directory for which the environment will be seted");
+                if (await this.multiroot.switchEnv() !== true) {
+                    vscode.window.showErrorMessage("No active directory selected. oneAPI environment not applied.");
+                    return false;
+                }
+            }
+        }
         if (!this.collection.get('SETVARS_COMPLETED')) {
             if (!await this.isTerminalAcceptable()) {
                 vscode.window.showErrorMessage("The terminal does not meet the requirements. If you are using PowerShell it must be version 7 or higher.");
@@ -98,7 +119,7 @@ export class DevFlow {
                 return false;
             }
             let setvarsPath = await this.findSetvarsPath();
-            if (setvarsPath === undefined) {
+            if (!setvarsPath) {
                 vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
                 const options: vscode.OpenDialogOptions = {
                     canSelectMany: false,
@@ -110,7 +131,6 @@ export class DevFlow {
                 let setVarsFileUri;
                 setVarsFileUri = await vscode.window.showOpenDialog(options);
                 if (setVarsFileUri && setVarsFileUri[0]) {
-                    oneAPIDir = path.dirname(setVarsFileUri[0].fsPath);
                     return await this.getEnvironment(setVarsFileUri[0].fsPath);
                 } else {
                     vscode.window.showErrorMessage(`Path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} invalid, The oneAPI environment was not be applied.\n Please check setvars.${process.platform === 'win32' ? 'bat' : 'sh'} and try again.`, { modal: true });
@@ -118,34 +138,45 @@ export class DevFlow {
                 }
             } else {
                 vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
-                oneAPIDir = path.dirname(setvarsPath);
                 return await this.getEnvironment(setvarsPath);
             }
         }
         return true;
     }
+
     async clearEnvironment(): Promise<boolean> {
+        if (this.multiroot && this.multiroot.activeDir) {
+            this.multiroot.writeEnvToExtensionStorage(this.multiroot.activeDir, new Map());
+        }
         this.collection.clear();
-        oneAPIDir = '';
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
         return true;
     }
+
     async getEnvironment(fspath: string): Promise<boolean> {
         let cmd = process.platform === 'win32' ?
             `"${fspath}" > NULL && set` :
             `bash -c ". ${fspath}  > /dev/null && printenv"`;
         await this.getEnvWithProgressBar(cmd);
         await this.checkExistingTerminals();
+        if (this.multiroot && this.multiroot.activeDir) {
+            let activeEnv = new Map();
+            this.collection.forEach((k, m) => {
+                activeEnv.set(k, m.value);
+            });
+            await this.multiroot.writeEnvToExtensionStorage(this.multiroot.activeDir, activeEnv);
+        }
         return true;
     }
 
     async getEnvWithProgressBar(cmd: string) {
-        vscode.window.withProgress({
+        await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: "Setting up oneAPI environment...",
             cancellable: true
         }, async (_progress, token) => {
             token.onCancellationRequested(() => {
+                this.collection.clear();
                 return false; // if user click on CANCEL
             });
             await this.execSetvarsCatch(token, cmd);
@@ -153,7 +184,7 @@ export class DevFlow {
     }
 
     async execSetvarsCatch(token: vscode.CancellationToken, cmd: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>(async (resolve, reject) => {
             if (token.isCancellationRequested) {
                 this.collection.clear();
                 return;
@@ -171,17 +202,17 @@ export class DevFlow {
                     vscode.window.showErrorMessage(`Something went wrong! \n Error: ${err} oneAPI environment not applied.`);
                     reject(err);
                 });
-
             childProcess.stdout?.on("data", (d: string) => {
                 let vars = d.split('\n');
                 vars.forEach(async (l) => {
                     let e = l.indexOf('=');
                     let k = <string>l.substr(0, e);
                     let v = <string>l.substr((e + 1)).replace(`\r`, "");
-                    
+
                     if (k === "" || v === "") {
                         return;
                     }
+
                     if (process.env[k] !== v) {
                         if (!process.env[k]) {
                             this.collection.append(k, v);
@@ -194,6 +225,7 @@ export class DevFlow {
             token.onCancellationRequested(_ => childProcess.kill());
         });
     }
+
     async findSetvarsPath(): Promise<string | undefined> {
         try {
             // 1.check $PATH for setvars.sh
@@ -265,7 +297,7 @@ export class DevFlow {
         };
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
-        if (workspaceFolder === undefined) {
+        if (!workspaceFolder) {
             return false; // for unit tests
         }
         let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
@@ -317,7 +349,7 @@ export class DevFlow {
                 }
             }
             let config: any = taskConfig['tasks'];
-            if (config === undefined) {
+            if (!config) {
                 config = [taskConfigValue];
             } else {
                 let isUniq: boolean = await this.checkTaskItem(config, taskConfigValue);
@@ -334,15 +366,17 @@ export class DevFlow {
     }
 
     async makeLaunchFile(): Promise<boolean> {
+        if (!await this.checkAndGetEnvironment()) {
+            return false;
+        };
+        let oneAPIDir = this.collection.get("ONEAPI_ROOT")?.value;
         if (!oneAPIDir) {
-            this.collection.clear();
-            if (!await this.checkAndGetEnvironment()) {
-                return false;
-            };
+            vscode.window.showErrorMessage("Could not find environment variable ONEAPI_ROOT. Make sure it is exposed.");
+            return false;
         }
         let buildSystem = 'cmake';
         let workspaceFolder = await this.getworkspaceFolder();
-        if (workspaceFolder === undefined) {
+        if (!workspaceFolder) {
             return false; // for unit tests
         }
         let projectRootDir = `${workspaceFolder?.uri.fsPath}`;
@@ -412,8 +446,7 @@ export class DevFlow {
             debugConfig.name = selection === 'a.out' ?
                 `Launch_template` :
                 `(gdb-oneapi) ${path.parse(execFile).base} Launch`;
-            debugConfig.program = `${execFile}`.split(/[\\\/]/g).join(path.posix.sep);;
-
+            debugConfig.program = `${execFile}`.split(/[\\\/]/g).join(path.posix.sep);
             let pathToGDB = path.join(oneAPIDir, 'debugger', 'latest', 'gdb', 'intel64', 'bin', process.platform === 'win32' ? 'gdb-oneapi.exe' : 'gdb-oneapi');
             //This is the only known way to replace \\ with /
             debugConfig.miDebuggerPath = path.posix.normalize(pathToGDB).split(/[\\\/]/g).join(path.posix.sep);
@@ -514,6 +547,7 @@ export class DevFlow {
         }
         return true;
     }
+
     async findExecutables(projectRootDir: string): Promise<string[]> {
         try {
             const cmd = process.platform === 'win32' ?
@@ -523,7 +557,7 @@ export class DevFlow {
             pathsToExecutables.pop();
             pathsToExecutables.forEach(async function (onePath, index, execList) {
                 //This is the only known way to replace \\ with /
-                execList[index] = path.posix.normalize(onePath.replace('\r','')).split(/[\\\/]/g).join(path.posix.sep);
+                execList[index] = path.posix.normalize(onePath.replace('\r', '')).split(/[\\\/]/g).join(path.posix.sep);
             });
             return pathsToExecutables;
         }
@@ -532,6 +566,7 @@ export class DevFlow {
             return [];
         }
     }
+
     async getExecNameFromCmake(projectRootDir: string): Promise<string[]> {
         try {
             let execNames: string[] = [];
