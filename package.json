@@ -34,6 +34,10 @@
 			{
 				"command": "intel.oneAPIСonfigurator.clearEnvironment",
 				"title": "Intel oneAPI: Unset oneAPI environment"
+			},
+			{
+				"command": "intel.oneAPIСonfigurator.switchEnv",
+				"title": "Intel oneAPI: Switch environment"
 			}
 		]
 	},
