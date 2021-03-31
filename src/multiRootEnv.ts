@@ -5,23 +5,26 @@
  * SPDX-License-Identifier: MIT
  */
 
- 'use strict';
+'use strict';
 import * as vscode from 'vscode';
 
 export class MultiRootEnv {
     storage: vscode.Memento;
     activeDir: string | undefined;
+    statusBarItem: vscode.StatusBarItem;
     collection: vscode.EnvironmentVariableCollection;
     constructor(storage: vscode.Memento, collection: vscode.EnvironmentVariableCollection) {
         this.collection = collection;
         this.storage = storage;
-        this.activeDir = storage.get("activeDir");
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
+        this.statusBarItem.show();
+        this.setActiveDir(storage.get("activeDir"));
         if (this.activeDir && !vscode.workspace.workspaceFolders?.find((el) => {
             if (el.uri.toString() === this.activeDir) { return true; }
         })) {
             storage.update("activeDir", undefined);
             storage.update(this.activeDir, undefined);
-            this.activeDir = undefined;
+            this.setActiveDir(undefined);
         }
         vscode.workspace.workspaceFolders?.forEach(async folder => {
             let env = await this.readEnvFromExtensionStorage(folder.uri.toString());
@@ -30,6 +33,21 @@ export class MultiRootEnv {
             }
         });
     }
+
+    setActiveDir(dir: string | undefined) {
+        this.activeDir = dir;
+        if (dir) {
+            let activeDirUri = vscode.Uri.parse(dir);
+            let activeDirName = vscode.workspace.getWorkspaceFolder(activeDirUri)?.name;
+            if (activeDirName) {
+                this.statusBarItem.text = "Active environment: ".concat(activeDirName);
+            }
+        }
+        else {
+            this.statusBarItem.text = "Active environment: ".concat("not selected");
+        }
+    }
+
     async writeEnvToExtensionStorage(k: string, v: Map<string, string> | undefined): Promise<void> {
         if (v === undefined) {
             await this.storage.update(k, v);
@@ -70,7 +88,7 @@ export class MultiRootEnv {
 
     async removeEnv(folder: string) {
         if (this.activeDir === folder) {
-            this.activeDir = undefined;
+            this.setActiveDir(undefined);
             await this.storage.update("activeDir", undefined);
             this.collection.clear();
         }
@@ -83,7 +101,7 @@ export class MultiRootEnv {
             return false;
         }
         let activeDir = folder?.uri.toString();
-        this.activeDir = activeDir;
+        this.setActiveDir(activeDir);
         await this.storage.update("activeDir", activeDir);
         await this.applyEnv(activeDir);
         vscode.window.showInformationMessage(`Working directory selected: ${folder?.name}`);
