@@ -2,7 +2,7 @@ import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, Activi
 import { DialogHandler } from 'vscode-extension-tester-native';
 import { expect } from 'chai';
 import { join } from 'path';
-import { rmdirSync, existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 
 
 describe('DevFlow extension UI Tests', function () {
@@ -135,7 +135,7 @@ describe('DevFlow extension UI Tests', function () {
             });
 
             after(function () {
-                rmdirSync(vscodeConfigsPath, { recursive: true });
+                unlinkSync(join(vscodeConfigsPath,'tasks.json'));
             });
         });
 
@@ -185,7 +185,7 @@ describe('DevFlow extension UI Tests', function () {
             });
 
             after(function () {
-                rmdirSync(vscodeConfigsPath, { recursive: true });
+                unlinkSync(join(vscodeConfigsPath,'launch.json'));
             });
         });
     });
