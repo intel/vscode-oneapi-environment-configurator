@@ -2,7 +2,7 @@ import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, Activi
 import { DialogHandler } from 'vscode-extension-tester-native';
 import { expect } from 'chai';
 import { join } from 'path';
-import { rmdirSync, existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 
 
 describe('DevFlow extension UI Tests', function () {
@@ -35,7 +35,7 @@ describe('DevFlow extension UI Tests', function () {
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
-                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment script'); }, 5000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment script'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
@@ -45,7 +45,7 @@ describe('DevFlow extension UI Tests', function () {
                 let workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Generate tasks');
                 await driver.sleep(1000);
-                const notification = await driver.wait(async () => { return await getNotifications('Please add one or more working directories and try again.'); }, 5000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('Please add one or more working directories and try again.'); }, 10000) as Notification;
                 // close error msg about workdir
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
@@ -55,7 +55,7 @@ describe('DevFlow extension UI Tests', function () {
                 let workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Generate launch configurations');
                 await driver.sleep(1000);
-                const notification = await driver.wait(async () => { return await getNotifications('Please add one or more working directories and try again.'); }, 5000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('Please add one or more working directories and try again.'); }, 10000) as Notification;
                 // close error msg about workdir
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
@@ -75,7 +75,7 @@ describe('DevFlow extension UI Tests', function () {
                 let workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Unset oneAPI environment');
                 await driver.sleep(1000);
-                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 5000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 10000) as Notification;
                 expect(await notification.getMessage()).equals('oneAPI environment removed successfully.');
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
@@ -91,7 +91,7 @@ describe('DevFlow extension UI Tests', function () {
             await dialog.confirm();
         });
         describe('Intel oneAPI: Generate tasks', function () {
-            const vscodeConfigsPath = join(workspacePath, 'matrix-mul', '.vscode');
+            const vscodeConfigsPath = join(workspacePath, 'matrix_mul', '.vscode');
 
             it('Quick pick contain command', async function () {
                 let workbench = new Workbench();
@@ -125,7 +125,7 @@ describe('DevFlow extension UI Tests', function () {
                 await input.selectQuickPick('build_dpcpp');
                 await driver.sleep(1000);
                 const pick = await input.findQuickPick('buid_dpcpp');
-                const notification = await driver.wait(async () => { return await getNotifications('Task for "build_dpcpp" was added'); }, 5000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('Task for "build_dpcpp" was added'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
 
@@ -135,12 +135,12 @@ describe('DevFlow extension UI Tests', function () {
             });
 
             after(function () {
-                rmdirSync(vscodeConfigsPath, { recursive: true });
+                unlinkSync(join(vscodeConfigsPath,'tasks.json'));
             });
         });
 
         describe('Intel oneAPI: Generate launch configurations', function () {
-            const vscodeConfigsPath = join(workspacePath, 'matrix-mul', '.vscode');
+            const vscodeConfigsPath = join(workspacePath, 'matrix_mul', '.vscode');
 
             it('Quick pick contain command', async function () {
                 let workbench = new Workbench();
@@ -175,7 +175,7 @@ describe('DevFlow extension UI Tests', function () {
                 await dialog.pushButton('OK');
                 await input.cancel();
                 await input.cancel();
-                const notification = await driver.wait(async () => { return await getNotifications('Launch configuration "Launch_template" for "a.out" was added'); }, 5000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('Launch configuration "Launch_template" for "a.out" was added'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
 
@@ -185,7 +185,7 @@ describe('DevFlow extension UI Tests', function () {
             });
 
             after(function () {
-                rmdirSync(vscodeConfigsPath, { recursive: true });
+                unlinkSync(join(vscodeConfigsPath,'launch.json'));
             });
         });
     });
