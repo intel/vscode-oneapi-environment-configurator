@@ -1,0 +1,7 @@
+out
+node_modules
+test-resources
+*.vsix
+test-resources
+.vscode
+*lock*
