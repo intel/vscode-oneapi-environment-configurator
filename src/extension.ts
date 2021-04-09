@@ -7,21 +7,14 @@
 
 'use strict';
 import * as vscode from 'vscode';
-import * as devFlow from './devFlow';
-
-let c: vscode.ExtensionContext;
+import { DevFlow } from './devFlow';
 
 export function activate(context: vscode.ExtensionContext) {
-	c = context;
-	let devFlofData = new devFlow.DevFlow(c);
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateLaunchJson', () => devFlofData.makeLaunchFile()));
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateTaskJson', () => devFlofData.makeTasksFile()));
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.setONEAPIenvironment', () => devFlofData.checkAndGetEnvironment()));
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.clearEnvironment', () => devFlofData.clearEnvironment()));
-
-	vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
-		devFlofData.checkNewTerminals(terminal);
-	});
+	let devFlof = new DevFlow(context);
+	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateLaunchJson', () => devFlof.launchConfigurator.makeLaunchFile()));
+	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateTaskJson', () => devFlof.launchConfigurator.makeTasksFile()));
+	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.setONEAPIenvironment', () => devFlof.environment.setOneApiEnv()));
+	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.clearEnvironment', () => devFlof.environment.unsetOneApiEnv()));
 }
 
 export function deactivate() {

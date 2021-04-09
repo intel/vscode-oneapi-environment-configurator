@@ -108,9 +108,6 @@ describe('DevFlow extension UI Tests', function () {
                 await input.selectQuickPick('Intel oneAPI: Generate tasks');
                 await driver.sleep(1000);
 
-                // close the dialog after setting the environment
-                const dialog = new ModalDialog();
-                await dialog.pushButton('OK');
                 const pick = await input.findQuickPick('build_dpcpp');
                 await driver.sleep(1000);
                 expect(pick).not.undefined;
@@ -135,12 +132,20 @@ describe('DevFlow extension UI Tests', function () {
             });
 
             after(function () {
-                unlinkSync(join(vscodeConfigsPath,'tasks.json'));
+                unlinkSync(join(vscodeConfigsPath, 'tasks.json'));
             });
         });
 
         describe('Intel oneAPI: Generate launch configurations', function () {
             const vscodeConfigsPath = join(workspacePath, 'matrix_mul', '.vscode');
+            before(async function () {
+                let workbench = new Workbench();
+                await workbench.executeCommand('Intel oneAPI: Set oneAPI environment');
+                await driver.sleep(1000);
+                // close the dialog after setting the environment
+                const dialog = new ModalDialog();
+                await dialog.pushButton('OK');
+            });
 
             it('Quick pick contain command', async function () {
                 let workbench = new Workbench();
@@ -185,7 +190,7 @@ describe('DevFlow extension UI Tests', function () {
             });
 
             after(function () {
-                unlinkSync(join(vscodeConfigsPath,'launch.json'));
+                unlinkSync(join(vscodeConfigsPath, 'launch.json'));
             });
         });
     });
