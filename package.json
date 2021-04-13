@@ -2,7 +2,7 @@
 	"name": "oneapi-configurator",
 	"displayName": "Environment and Launch Configurator for Intel oneAPI Toolkits (preview)",
 	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
-	"version": "0.0.54",
+	"version": "0.0.59",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",

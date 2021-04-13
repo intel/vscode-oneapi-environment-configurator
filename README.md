@@ -15,6 +15,12 @@ For more information , see **Intel oneAPI toolkits and components** and **Other 
     * All tasks, launches, and terminals created after that will contain the oneAPI environment.
     * To delete the oneAPI environment click on `Intel oneAPI: Unset oneAPI environment`
 
+    You can limit the initialization of the environment to a specific set of oneAPI components, and also initialize the environment for a specific version of the component. For this you need to add key-value "SETVARS_CONFIG": "full/path/to/your/config.txt" to the settings.json file:
+    ```json
+    {
+        "SETVARS_CONFIG": "full/path/to/your/config.txt"
+    }
+    ```
 - Preparing tasks from make / cmake files:
     * Click on `Intel oneAPI: Generate tasks` and follow the prompts to add targets from your make/cmake oneAPI project. If the oneAPI environment is not present it will be automatically added to the current VSCode instance.
     * Now you can run targets from make/cmake in the oneAPI environment via `Terminal -> Run task...`

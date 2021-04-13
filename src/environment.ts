@@ -63,7 +63,7 @@ export class MultiRootEnv extends OneApiEnv {
         this.setActiveDir(this.storage.storage.get("activeDir"));
         this.statusBarItem.show();
         this.checkActiveDirForRelevance();
-        
+
         vscode.workspace.workspaceFolders?.forEach(async folder => {
             let env = await this.storage.readEnvFromExtensionStorage(folder.uri.toString());
             if (!env) {
@@ -241,8 +241,15 @@ async function findSetvarsPath(): Promise<string | undefined> {
         return undefined;
     }
 }
+
+function getSetvarsConfigPath(): string | undefined {
+    const oneAPIConfiguration = vscode.workspace.getConfiguration();
+    const setvarsConfigPath: string | undefined = oneAPIConfiguration.get("SETVARS_CONFIG");
+    return setvarsConfigPath;
+}
+
 async function getEnvironment(collection: vscode.EnvironmentVariableCollection): Promise<boolean | undefined> {
-    let setvarsPath = await findSetvarsPath();
+    const setvarsPath = await findSetvarsPath();
     if (!setvarsPath) {
         vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
         const options: vscode.OpenDialogOptions = {
@@ -252,8 +259,7 @@ async function getEnvironment(collection: vscode.EnvironmentVariableCollection):
             }
         };
 
-        let setVarsFileUri;
-        setVarsFileUri = await vscode.window.showOpenDialog(options);
+        let setVarsFileUri = await vscode.window.showOpenDialog(options);
         if (setVarsFileUri && setVarsFileUri[0]) {
             return await runSetvars(setVarsFileUri[0].fsPath, collection);
         } else {
@@ -265,10 +271,16 @@ async function getEnvironment(collection: vscode.EnvironmentVariableCollection):
         return await runSetvars(setvarsPath, collection);
     }
 }
+
 async function runSetvars(fspath: string, collection: vscode.EnvironmentVariableCollection): Promise<boolean> {
+    const setvarsConfigPath = getSetvarsConfigPath();
+    let args = '';
+    if (setvarsConfigPath) {
+        args = `--config="${setvarsConfigPath}"`;
+    }
     let cmd = process.platform === 'win32' ?
-        `"${fspath}" > NULL && set` :
-        `bash -c ". ${fspath}  > /dev/null && printenv"`;
+        `"${fspath}" ${args} > NULL && set` :
+        `bash -c ". ${fspath} ${args} > /dev/null && printenv"`;
 
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -284,6 +296,7 @@ async function runSetvars(fspath: string, collection: vscode.EnvironmentVariable
     await terminal_utils.checkExistingTerminals();
     return true;
 }
+
 async function execSetvarsCatch(token: vscode.CancellationToken, cmd: string, collection: vscode.EnvironmentVariableCollection): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
         if (token.isCancellationRequested) {
@@ -326,6 +339,7 @@ async function execSetvarsCatch(token: vscode.CancellationToken, cmd: string, co
         token.onCancellationRequested(_ => childProcess.kill());
     });
 }
+
 async function getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
     if (vscode.workspace.workspaceFolders?.length === 1) {
         return vscode.workspace.workspaceFolders[0];
