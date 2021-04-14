@@ -9,9 +9,15 @@
 import * as vscode from 'vscode';
 
 export class Storage {
-    storage: vscode.Memento;
+    private storage: vscode.Memento;
     constructor(storage: vscode.Memento) {
         this.storage = storage;
+    }
+    get(key: string): string | undefined {
+        return this.storage.get(key);
+    }
+    async set(key: string, value: string | undefined) {
+        await this.storage.update(key, value);
     }
 
     async writeEnvToExtensionStorage(k: string, v: Map<string, string> | undefined): Promise<void> {
