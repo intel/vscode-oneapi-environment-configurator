@@ -214,9 +214,7 @@ export class SingleRootEnv extends OneApiEnv {
 
     async setOneApiEnv(): Promise<void> {
         if (!this.collection.get('SETVARS_COMPLETED')) {
-            if (terminal_utils.isTerminalAcceptable()) {
                 await this.getEnvironment();
-            }
         }
     };
 
@@ -263,9 +261,7 @@ export class MultiRootEnv extends OneApiEnv {
         }
 
         if (!this.collection.get('SETVARS_COMPLETED')) {
-            if (terminal_utils.isTerminalAcceptable()) {
-                await this.getEnvironment();
-            }
+            await this.getEnvironment();
             if (this.activeDir) {
                 let activeEnv = new Map();
                 this.collection.forEach((k, m) => {

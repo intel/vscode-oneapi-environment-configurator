@@ -7,7 +7,6 @@ This extension configures the system environment and settings for Intel oneAPI t
 
 ## Use
 Before you start, make sure that you have oneAPI BaseKit or other installed.
-Note: To use the environment features in Windows, you need to have PowerShell 7 or higher.
 For more information, see sections **Intel oneAPI toolkits and components** and **Other extensions for oneAPI**.
 - Launch the command palette to access the options:
     * Press `Ctrl+Shift+P` ( or `View -> Command Palette…` ) and type Intel oneAPI.

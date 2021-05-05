@@ -47,7 +47,7 @@
 		"lint": "eslint src --ext ts",
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
-		"test": "node ./out/test/runTest.js"
+		"test": "./node_modules/.bin/extest setup-and-run -y -o ./src/test/ui/test-configs/settings.json -m ./src/test/ui/test-configs/.mocharc.js ./out/test/ui/ui.test.js"
 	},
 	"devDependencies": {
 		"@types/chai": "^4.2.15",

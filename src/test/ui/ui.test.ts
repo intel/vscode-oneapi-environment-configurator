@@ -6,7 +6,7 @@ import { existsSync, unlinkSync } from 'fs';
 
 
 describe('DevFlow extension UI Tests', function () {
-    const workspacePath = join(process.cwd(), 'test-resources', 'samples');
+    const samplesPath = join(process.cwd(), 'test-resources', 'samples');
     let driver: WebDriver;
     let activityBar: ActivityBar;
     before(async () => {
@@ -35,6 +35,7 @@ describe('DevFlow extension UI Tests', function () {
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
+
                 const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment script'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
@@ -49,6 +50,7 @@ describe('DevFlow extension UI Tests', function () {
                 // close error msg about workdir
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
+
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
             it('Intel oneAPI: Generate launch configurations', async function () {
@@ -59,6 +61,7 @@ describe('DevFlow extension UI Tests', function () {
                 // close error msg about workdir
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
+
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
@@ -82,16 +85,16 @@ describe('DevFlow extension UI Tests', function () {
         });
 
     });
-    describe('With workspace', function () {
+    describe('With single-root workspace', function () {
         before(async () => {
             let workbench = new Workbench();
             await workbench.executeCommand('File: Open Folder');
             const dialog = await DialogHandler.getOpenDialog();
-            await dialog.selectPath(workspacePath);
+            await dialog.selectPath(samplesPath);
             await dialog.confirm();
         });
         describe('Intel oneAPI: Generate tasks', function () {
-            const vscodeConfigsPath = join(workspacePath, 'matrix_mul', '.vscode');
+            const vscodeConfigsPath = join(samplesPath, 'matrix_mul', '.vscode');
 
             it('Quick pick contain command', async function () {
                 let workbench = new Workbench();
@@ -137,7 +140,7 @@ describe('DevFlow extension UI Tests', function () {
         });
 
         describe('Intel oneAPI: Generate launch configurations', function () {
-            const vscodeConfigsPath = join(workspacePath, 'matrix_mul', '.vscode');
+            const vscodeConfigsPath = join(samplesPath, 'matrix_mul', '.vscode');
             before(async function () {
                 let workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Set oneAPI environment');
@@ -162,24 +165,33 @@ describe('DevFlow extension UI Tests', function () {
                 let input = new InputBox();
                 let pick = await input.findQuickPick('Put temporal target path "a.out" to replace it later with correct path manually');
                 await input.cancel();
+
                 // close warning about debugging
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
+
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-
                 let workbench = new Workbench();
                 workbench.executeCommand('Intel oneAPI: Generate launch configurations');
                 await driver.sleep(1000);
                 let input = new InputBox();
                 await input.selectQuickPick('Put temporal target path "a.out" to replace it later with correct path manually');
+
                 // close note about debugging launch template
                 const dialog = new ModalDialog();
                 await dialog.pushButton('OK');
+
                 await input.cancel();
                 await input.cancel();
+                await input.cancel();
+
+                // close debug warning on non-CPU devices
+                const debugWarning = new ModalDialog();
+                await debugWarning.pushButton('OK');
+
                 const notification = await driver.wait(async () => { return await getNotifications('Launch configuration "Launch_template" for "a.out" was added'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
@@ -194,6 +206,36 @@ describe('DevFlow extension UI Tests', function () {
             });
         });
     });
+    describe('With multi-root workspace', function () {
+        before(async () => {
+            let workbench = new Workbench();
+            let emptyFolderPath = join(process.cwd(), 'test-resources', 'tmp');
+            await workbench.executeCommand('Workspaces: Add Folder to Workspace');
+            const dialog = await DialogHandler.getOpenDialog();
+            await dialog.selectPath(emptyFolderPath);
+            await dialog.confirm();
+        });
+
+        it('Quick pick contain command', async function () {
+            let workbench = new Workbench();
+            let input = await workbench.openCommandPrompt() as InputBox;
+            await input.setText('>Intel oneAPI: Switch environment');
+            const pick = await input.findQuickPick('Intel oneAPI: Switch environment');
+            expect(pick).not.undefined;
+        });
+
+        it('Switching directory shows a notification with the correct text', async function () {
+            let workbench = new Workbench();
+            let input = await workbench.openCommandPrompt() as InputBox;
+            await input.setText('>Intel oneAPI: Switch environment');
+            await input.selectQuickPick('Intel oneAPI: Switch environment');
+            await driver.sleep(1000);
+            await input.selectQuickPick('tmp');
+            const notification = await driver.wait(async () => { return await getNotifications('Working directory selected: tmp'); }, 10000) as Notification;
+            expect(await notification.getType()).equals(NotificationType.Info);
+        });
+
+    });
 });
 
 
@@ -206,4 +248,3 @@ async function getNotifications(text: string): Promise<Notification | undefined>
         }
     }
 }
-
