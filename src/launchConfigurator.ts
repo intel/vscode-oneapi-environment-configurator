@@ -113,15 +113,6 @@ export class LaunchConfigurator {
     }
 
     async makeLaunchFile(): Promise<boolean> {
-        if (!this.collection.get('SETVARS_COMPLETED')) {
-            vscode.window.showErrorMessage("Failed to generate launch configurations. Make sure oneAPI environment is set.");
-            return false;
-        };
-        let oneAPIDir = this.collection.get("ONEAPI_ROOT")?.value;
-        if (!oneAPIDir) {
-            vscode.window.showErrorMessage("Could not find environment variable ONEAPI_ROOT. Make sure oneAPI environment is set.");
-            return false;
-        }
         let buildSystem = 'cmake';
         let workspaceFolder = await getworkspaceFolder();
         if (!workspaceFolder) {
@@ -195,9 +186,6 @@ export class LaunchConfigurator {
                 `Launch_template` :
                 `(gdb-oneapi) ${parse(execFile).base} Launch`;
             debugConfig.program = `${execFile}`.split(/[\\\/]/g).join(posix.sep);
-            let pathToGDB = join(oneAPIDir, 'debugger', 'latest', 'gdb', 'intel64', 'bin', process.platform === 'win32' ? 'gdb-oneapi.exe' : 'gdb-oneapi');
-            //This is the only known way to replace \\ with /
-            debugConfig.miDebuggerPath = posix.normalize(pathToGDB).split(/[\\\/]/g).join(posix.sep);
             await this.addTasksToLaunchConfig();
             let isUniq: boolean = await this.checkLaunchItem(configurations, debugConfig);
             if (isUniq) {
