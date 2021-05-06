@@ -57,6 +57,10 @@ export abstract class OneApiEnv {
     private getSetvarsConfigPath(): string | undefined {
         const oneAPIConfiguration = vscode.workspace.getConfiguration();
         const setvarsConfigPath: string | undefined = oneAPIConfiguration.get("SETVARS_CONFIG");
+        if (setvarsConfigPath && !existsSync(setvarsConfigPath)) {
+            vscode.window.showErrorMessage('The path to the config file specified in SETVARS_CONFIG is not valid, so it is ignored');
+            return undefined;
+        }
         return setvarsConfigPath;
     }
 
@@ -129,6 +133,7 @@ export abstract class OneApiEnv {
         const setvarsConfigPath = this.getSetvarsConfigPath();
         let args = '';
         if (setvarsConfigPath) {
+            vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} will be used`);
             args = `--config="${setvarsConfigPath}"`;
         }
         let cmd = process.platform === 'win32' ?
@@ -271,13 +276,14 @@ export class MultiRootEnv extends OneApiEnv {
         }
 
         if (!this.collection.get('SETVARS_COMPLETED')) {
-            await this.getEnvironment();
-            if (this.activeDir) {
-                let activeEnv = new Map();
-                this.collection.forEach((k, m) => {
-                    activeEnv.set(k, m.value);
-                });
-                await this.storage.writeEnvToExtensionStorage(this.activeDir, activeEnv);
+            if (await this.getEnvironment()) {
+                if (this.activeDir) {
+                    let activeEnv = new Map();
+                    this.collection.forEach((k, m) => {
+                        activeEnv.set(k, m.value);
+                    });
+                    await this.storage.writeEnvToExtensionStorage(this.activeDir, activeEnv);
+                }
             }
         }
     };
