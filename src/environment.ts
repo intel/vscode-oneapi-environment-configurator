@@ -31,7 +31,7 @@ export abstract class OneApiEnv {
     abstract unsetOneApiEnv(): void;
 
     protected async getEnvironment(): Promise<boolean | undefined> {
-        let setvarsPath = await this.findSetvarsPath();
+        const setvarsPath = await this.findSetvarsPath();
         if (!setvarsPath) {
             vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
             const options: vscode.OpenDialogOptions = {
@@ -41,8 +41,7 @@ export abstract class OneApiEnv {
                 }
             };
 
-            let setVarsFileUri;
-            setVarsFileUri = await vscode.window.showOpenDialog(options);
+            const setVarsFileUri = await vscode.window.showOpenDialog(options);
             if (setVarsFileUri && setVarsFileUri[0]) {
                 return await this.runSetvars(setVarsFileUri[0].fsPath);
             } else {
@@ -53,6 +52,12 @@ export abstract class OneApiEnv {
             vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
             return await this.runSetvars(setvarsPath);
         }
+    }
+
+    private getSetvarsConfigPath(): string | undefined {
+        const oneAPIConfiguration = vscode.workspace.getConfiguration();
+        const setvarsConfigPath: string | undefined = oneAPIConfiguration.get("SETVARS_CONFIG");
+        return setvarsConfigPath;
     }
 
     private async findSetvarsPath(): Promise<string | undefined> {
@@ -121,9 +126,14 @@ export abstract class OneApiEnv {
     }
 
     private async runSetvars(fspath: string): Promise<boolean> {
+        const setvarsConfigPath = this.getSetvarsConfigPath();
+        let args = '';
+        if (setvarsConfigPath) {
+            args = `--config="${setvarsConfigPath}"`;
+        }
         let cmd = process.platform === 'win32' ?
-            `"${fspath}" > NULL && set` :
-            `bash -c ". ${fspath}  > /dev/null && printenv"`;
+            `"${fspath}" ${args} > NULL && set` :
+            `bash -c ". ${fspath} ${args} > /dev/null && printenv"`;
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -214,7 +224,7 @@ export class SingleRootEnv extends OneApiEnv {
 
     async setOneApiEnv(): Promise<void> {
         if (!this.collection.get('SETVARS_COMPLETED')) {
-                await this.getEnvironment();
+            await this.getEnvironment();
         }
     };
 
