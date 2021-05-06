@@ -133,7 +133,7 @@ export abstract class OneApiEnv {
         const setvarsConfigPath = this.getSetvarsConfigPath();
         let args = '';
         if (setvarsConfigPath) {
-            vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} will be used`);
+            vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
             args = `--config="${setvarsConfigPath}"`;
         }
         let cmd = process.platform === 'win32' ?
