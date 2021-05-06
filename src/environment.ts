@@ -133,7 +133,7 @@ export abstract class OneApiEnv {
         }
         let cmd = process.platform === 'win32' ?
             `"${fspath}" ${args} > NULL && set` :
-            `bash -c ". ${fspath} ${args} > /dev/null && printenv"`;
+            `bash -c ". ${fspath} ${args}  > /dev/null && env -0"`;
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -170,7 +170,7 @@ export abstract class OneApiEnv {
                     reject(err);
                 });
             childProcess.stdout?.on("data", (d: string) => {
-                let vars = d.split('\n');
+                let vars = d.split('\u0000');
                 vars.forEach(async (l) => {
                     let e = l.indexOf('=');
                     let k = <string>l.substr(0, e);
