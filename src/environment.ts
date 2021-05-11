@@ -165,17 +165,18 @@ export abstract class OneApiEnv {
                 .on("close", (code, signal) => {
                     if (code || signal) {
                         this.collection.clear();
-                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code ? code : signal}. oneAPI environment not applied.`);
+                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code ? code : signal}. oneAPI environment not applied.`, { modal: true });
                     }
                     resolve();
                 })
                 .on("error", (err) => {
                     this.collection.clear();
-                    vscode.window.showErrorMessage(`Something went wrong! \n Error: ${err} oneAPI environment not applied.`);
+                    vscode.window.showErrorMessage(`Something went wrong! \n Error: ${err} oneAPI environment not applied.`, { modal: true });
                     reject(err);
                 });
             childProcess.stdout?.on("data", (d: string) => {
-                let vars = d.split('\u0000');
+                const separator = process.platform === 'win32' ? '\n' : '\u0000';
+                let vars = d.split(separator);
                 vars.forEach(async (l) => {
                     let e = l.indexOf('=');
                     let k = <string>l.substr(0, e);
@@ -228,12 +229,31 @@ export class SingleRootEnv extends OneApiEnv {
     }
 
     async setOneApiEnv(): Promise<void> {
-        if (!this.collection.get('SETVARS_COMPLETED')) {
-            await this.getEnvironment();
+        if (this.collection.get('SETVARS_COMPLETED')) {
+            vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Unset oneAPI environment' or choose a different working directory for initialization", { modal: true });
+            return;
+        };
+        if (process.env.SETVARS_COMPLETED) {
+            await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
+            let dialogOptions: string[] = [];
+            dialogOptions.push('Skip');
+            dialogOptions.push('Continue');
+            let options: vscode.InputBoxOptions = {
+                placeHolder: `Continue initializing the oneAPI environment?`
+            };
+            let selection = await vscode.window.showQuickPick(dialogOptions, options);
+            if (selection !== 'Continue') {
+                return;
+            }
         }
+        await this.getEnvironment();
     };
 
     async unsetOneApiEnv(): Promise<void> {
+        if (!this.collection.get('SETVARS_COMPLETED')) {
+            vscode.window.showWarningMessage("oneAPI environment has not been configured and cannot be removed.");
+            return;
+        }
         await this.restoreVscodeEnv();
         this.collection.clear();
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
@@ -270,20 +290,35 @@ export class MultiRootEnv extends OneApiEnv {
         if (!this.activeDir) {
             vscode.window.showInformationMessage("Select the directory for which the environment will be seted");
             if (await this.switchEnv() !== true) {
-                vscode.window.showErrorMessage("No active directory selected. oneAPI environment not applied.");
+                vscode.window.showErrorMessage("No active directory selected. oneAPI environment not applied.", { modal: true });
                 return;
             }
         }
 
-        if (!this.collection.get('SETVARS_COMPLETED')) {
-            if (await this.getEnvironment()) {
-                if (this.activeDir) {
-                    let activeEnv = new Map();
-                    this.collection.forEach((k, m) => {
-                        activeEnv.set(k, m.value);
-                    });
-                    await this.storage.writeEnvToExtensionStorage(this.activeDir, activeEnv);
-                }
+        if (this.collection.get('SETVARS_COMPLETED')) {
+            vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Unset oneAPI environment' or choose a different working directory for initialization", { modal: true });
+            return;
+        };
+        if (process.env.SETVARS_COMPLETED) {
+            await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
+            let dialogOptions: string[] = [];
+            dialogOptions.push('Skip');
+            dialogOptions.push('Continue');
+            let options: vscode.InputBoxOptions = {
+                placeHolder: `Continue initializing the oneAPI environment?`
+            };
+            let selection = await vscode.window.showQuickPick(dialogOptions, options);
+            if (selection !== 'Continue') {
+                return;
+            }
+        }
+        if (await this.getEnvironment()) {
+            if (this.activeDir) {
+                let activeEnv = new Map();
+                this.collection.forEach((k, m) => {
+                    activeEnv.set(k, m.value);
+                });
+                await this.storage.writeEnvToExtensionStorage(this.activeDir, activeEnv);
             }
         }
     };
@@ -378,7 +413,7 @@ async function getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined>
     }
     let selection = await vscode.window.showWorkspaceFolderPick();
     if (!selection) {
-        vscode.window.showErrorMessage("Cannot find the working directory!", { modal: true });
+        vscode.window.showErrorMessage("Cannot find the working directory.", { modal: true });
         vscode.window.showInformationMessage("Please add one or more working directories and try again.");
         return undefined; // for unit tests
     }
