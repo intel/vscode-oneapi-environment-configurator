@@ -11,9 +11,9 @@ For more information, see sections **Intel oneAPI toolkits and components** and 
 - Launch the command palette to access the options:
     * Press `Ctrl+Shift+P` ( or `View -> Command Palette…` ) and type Intel oneAPI.
 - Adding and removing oneAPI environments for local and remote cases:
-    * Choose the option `Intel oneAPI: Set oneAPI environment`.
+    * Choose the option `Intel oneAPI: Initialize environment variables`.
     * All tasks, launches, and terminals created after that will contain the oneAPI environment.
-    * To delete the oneAPI environment choose the option `Intel oneAPI: Unset oneAPI environment`
+    * To delete the oneAPI environment choose the option `Intel oneAPI: Clear environment variables`
 
     You can limit the initialization of the environment to a specific set of oneAPI components, and also initialize the environment for a specific version of the component. For this you need to add key-value "SETVARS_CONFIG": "full/path/to/your/config.txt" to the settings.json file:
     ```json

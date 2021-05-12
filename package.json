@@ -27,12 +27,12 @@
 				"title": "Intel oneAPI: Generate tasks"
 			},
 			{
-				"command": "intel.oneAPIСonfigurator.setONEAPIenvironment",
-				"title": "Intel oneAPI: Set oneAPI environment"
+				"command": "intel.oneAPIСonfigurator.initializeEnvironment",
+				"title": "Intel oneAPI: Initialize environment variables"
 			},
 			{
 				"command": "intel.oneAPIСonfigurator.clearEnvironment",
-				"title": "Intel oneAPI: Unset oneAPI environment"
+				"title": "Intel oneAPI: Clear environment variables"
 			},
 			{
 				"command": "intel.oneAPIСonfigurator.switchEnv",

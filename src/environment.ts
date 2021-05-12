@@ -27,8 +27,8 @@ export abstract class OneApiEnv {
         }));
     }
 
-    abstract setOneApiEnv(): Promise<void>;
-    abstract unsetOneApiEnv(): void;
+    abstract initializeEnvironment(): Promise<void>;
+    abstract clearEnvironment(): void;
 
     protected async getEnvironment(): Promise<boolean | undefined> {
         const setvarsPath = await this.findSetvarsPath();
@@ -228,7 +228,7 @@ export class SingleRootEnv extends OneApiEnv {
         super(context);
     }
 
-    async setOneApiEnv(): Promise<void> {
+    async initializeEnvironment(): Promise<void> {
         if (this.collection.get('SETVARS_COMPLETED')) {
             vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Unset oneAPI environment' or choose a different working directory for initialization", { modal: true });
             return;
@@ -249,7 +249,7 @@ export class SingleRootEnv extends OneApiEnv {
         await this.getEnvironment();
     };
 
-    async unsetOneApiEnv(): Promise<void> {
+    async clearEnvironment(): Promise<void> {
         if (!this.collection.get('SETVARS_COMPLETED')) {
             vscode.window.showWarningMessage("oneAPI environment has not been configured and cannot be removed.");
             return;
@@ -286,7 +286,7 @@ export class MultiRootEnv extends OneApiEnv {
         context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.switchEnv', () => this.switchEnv()));
     }
 
-    async setOneApiEnv(): Promise<void> {
+    async initializeEnvironment(): Promise<void> {
         if (!this.activeDir) {
             vscode.window.showInformationMessage("Select the directory for which the environment will be seted");
             if (await this.switchEnv() !== true) {
@@ -323,7 +323,7 @@ export class MultiRootEnv extends OneApiEnv {
         }
     };
 
-    async unsetOneApiEnv(): Promise<void> {
+    async clearEnvironment(): Promise<void> {
         if (this.activeDir) {
             this.storage.writeEnvToExtensionStorage(this.activeDir, new Map());
         }
