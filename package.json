@@ -37,6 +37,10 @@
 			{
 				"command": "intel.oneAPIСonfigurator.switchEnv",
 				"title": "Intel oneAPI: Switch environment"
+			},
+			{
+				"command": "intel.oneAPIСonfigurator.quickBuild",
+				"title": "Intel oneAPI: Quick build"
 			}
 		]
 	},

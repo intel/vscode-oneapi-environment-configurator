@@ -201,6 +201,37 @@ export class LaunchConfigurator {
         return true;
     }
 
+    async quickBuild(): Promise<boolean> {
+        if (!process.env.SETVARS_COMPLETED) {
+            vscode.window.showErrorMessage('Quick build failed. Initialize the oneAPI environment.', { modal: true });
+            return false;
+        }
+        const textEditor = vscode.window.activeTextEditor;
+        if (!textEditor) {
+            vscode.window.showErrorMessage('Quick build failed. No open file.', { modal: true });
+            return false;
+        }
+        const document = textEditor.document;
+        const language = document.languageId;
+        if (language != 'cpp') {
+            vscode.window.showErrorMessage('Quick build failed. The open file must be a cpp file.', { modal: true });
+            return false;
+        }
+        const parsedPath = parse(document.fileName);
+        const source = document.fileName;
+        const dest = join(parsedPath.dir, parsedPath.name);
+        const cmd = `dpcpp ${source} -o ${dest}`;
+        try {
+            execSync(cmd);
+        }
+        catch (err) {
+            console.log(err);
+            return false;
+        }
+        vscode.window.showInformationMessage(`File ${dest} was builded.`)
+        return true;
+    }
+
     private async checkTaskItem(listItems: any, newItem: any): Promise<boolean> {
         if (listItems.length === 0) {
             return true; // for tests
