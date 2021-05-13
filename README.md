@@ -31,7 +31,6 @@ For more information, see sections **Intel oneAPI toolkits and components** and 
 ## Intel oneAPI toolkits and components
 * General links: 
     - [oneAPI page](https://software.intel.com/en-us/oneapi)
-    - [Intel oneAPI Toolkit Samples](https://github.com/oneapi-src/oneAPI-samples).
 * To get started with oneAPI development may be useful:
     - [Installing Intel® oneAPI Toolkits via APT](https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html)
     - [Remote Visual Studio Code Development with Intel® oneAPI Toolkits on Linux](https://software.intel.com/content/www/us/en/develop/documentation/remote-vscode-development-on-linux/top.html)
