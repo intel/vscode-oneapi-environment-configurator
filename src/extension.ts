@@ -13,6 +13,8 @@ export function activate(context: vscode.ExtensionContext) {
 	let devFlof = new DevFlow(context);
 	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateLaunchJson', () => devFlof.launchConfigurator.makeLaunchFile()));
 	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateTaskJson', () => devFlof.launchConfigurator.makeTasksFile()));
+	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.quickBuild', () => devFlof.launchConfigurator.quickBuild(false)));
+	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.quickBuildSycl', () => devFlof.launchConfigurator.quickBuild(true)));
 	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.initializeEnvironment', () => devFlof.environment.initializeEnvironment()));
 	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.clearEnvironment', () => devFlof.environment.clearEnvironment()));
 }

@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import { execSync } from 'child_process';
 import { posix, join, parse, normalize } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 
 const debugConfig = {
     name: '(gdb-oneapi) ${workspaceFolderBasename} Launch',
@@ -201,7 +201,7 @@ export class LaunchConfigurator {
         return true;
     }
 
-    async quickBuild(): Promise<boolean> {
+    async quickBuild(isSyclEnabled: boolean): Promise<boolean> {
         if (!process.env.SETVARS_COMPLETED) {
             vscode.window.showErrorMessage('Quick build failed. Initialize the oneAPI environment.', { modal: true });
             return false;
@@ -220,12 +220,14 @@ export class LaunchConfigurator {
         const parsedPath = parse(document.fileName);
         const source = document.fileName;
         const dest = join(parsedPath.dir, parsedPath.name);
-        const cmd = `dpcpp ${source} -o ${dest}`;
+        const cmd = isSyclEnabled ? `icpx -fsycl -fsycl-unnamed-lambda ${source} -o ${dest} -v` : `icpx ${source} -o ${dest} -v`;
         try {
             execSync(cmd);
         }
         catch (err) {
-            console.log(err);
+            const logPath = join(parsedPath.dir, `compile_log`);
+            writeFileSync(logPath, err.message);
+            vscode.window.showErrorMessage(`Quick build failed. See compile log: ${logPath}`, { modal: true });
             return false;
         }
         vscode.window.showInformationMessage(`File ${dest} was builded.`)
