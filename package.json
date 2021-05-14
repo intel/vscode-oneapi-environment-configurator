@@ -40,11 +40,11 @@
 			},
 			{
 				"command": "intel.oneAPIСonfigurator.quickBuild",
-				"title": "Intel oneAPI: Quick build current file with ICX"
+				"title": "Intel oneAPI: Quick build current file with ICPX"
 			},
 			{
 				"command": "intel.oneAPIСonfigurator.quickBuildSycl",
-				"title": "Intel oneAPI: Quick build current file with ICX and SYCL enabled"
+				"title": "Intel oneAPI: Quick build current file with ICPX and SYCL enabled"
 			}
 		]
 	},
