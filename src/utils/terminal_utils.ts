@@ -7,7 +7,6 @@
 
 'use strict';
 import * as vscode from 'vscode';
-import { execSync } from 'child_process';
 
 export async function checkExistingTerminals(): Promise<boolean | undefined> {
     if (vscode.window.terminals !== undefined) {

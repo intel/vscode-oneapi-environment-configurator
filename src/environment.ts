@@ -283,7 +283,7 @@ export class MultiRootEnv extends OneApiEnv {
                 this.removeEnv(folder.uri.toString());
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.switchEnv', () => this.switchEnv()));
+        context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.switchEnv', () => this.switchEnv()));
     }
 
     async initializeEnvironment(): Promise<void> {
