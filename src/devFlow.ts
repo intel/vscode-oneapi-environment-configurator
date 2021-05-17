@@ -7,14 +7,11 @@
 
 'use strict';
 import * as vscode from 'vscode';
-import { LaunchConfigurator } from './launchConfigurator';
 import { OneApiEnv, SingleRootEnv, MultiRootEnv } from './environment';
 
 export class DevFlow {
     environment: OneApiEnv;
-    launchConfigurator: LaunchConfigurator;
     constructor(c: vscode.ExtensionContext) {
-        this.launchConfigurator = new LaunchConfigurator(c.environmentVariableCollection);
         this.environment = vscode.workspace.workspaceFile !== undefined ? new MultiRootEnv(c) : new SingleRootEnv(c);
     }
 }

@@ -1,7 +1,7 @@
 {
-	"name": "oneapi-configurator",
-	"displayName": "Environment and Launch Configurator for Intel oneAPI Toolkits (preview)",
-	"description": "Lightweight extension that simplifies developer flow for oneAPI.",
+	"name": "oneapi-environment-variables",
+	"displayName": "Environment Configurator for Intel oneAPI Toolkits",
+	"description": "Configure environment for working with Intel oneAPI Toolkit",
 	"version": "0.0.74",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
@@ -19,32 +19,16 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "intel.oneAPIСonfigurator.generateLaunchJson",
-				"title": "Intel oneAPI: Generate launch configurations"
-			},
-			{
-				"command": "intel.oneAPIСonfigurator.generateTaskJson",
-				"title": "Intel oneAPI: Generate tasks"
-			},
-			{
-				"command": "intel.oneAPIСonfigurator.initializeEnvironment",
+				"command": "intel-corporation.oneapi-environment-variables.initializeEnvironment",
 				"title": "Intel oneAPI: Initialize environment variables"
 			},
 			{
-				"command": "intel.oneAPIСonfigurator.clearEnvironment",
+				"command": "intel-corporation.oneapi-environment-variables.clearEnvironment",
 				"title": "Intel oneAPI: Clear environment variables"
 			},
 			{
-				"command": "intel.oneAPIСonfigurator.switchEnv",
+				"command": "intel-corporation.oneapi-environment-variables.switchEnv",
 				"title": "Intel oneAPI: Switch environment"
-			},
-			{
-				"command": "intel.oneAPIСonfigurator.quickBuild",
-				"title": "Intel oneAPI: Quick build current file with ICPX"
-			},
-			{
-				"command": "intel.oneAPIСonfigurator.quickBuildSycl",
-				"title": "Intel oneAPI: Quick build current file with ICPX and SYCL enabled"
 			}
 		]
 	},
