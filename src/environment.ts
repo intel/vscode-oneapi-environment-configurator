@@ -23,7 +23,7 @@ export abstract class OneApiEnv {
         context.subscriptions.push(vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
             if (context.environmentVariableCollection.get('SETVARS_COMPLETED')) {
                 vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `Intel oneAPI: ${terminal.name}` });
-            };
+            }
         }));
     }
 
@@ -68,18 +68,18 @@ export abstract class OneApiEnv {
     private async findSetvarsPath(): Promise<string | undefined> {
         try {
             // 1.check $PATH for setvars.sh
-            let cmdParsePath = process.platform === 'win32' ?
+            const cmdParsePath = process.platform === 'win32' ?
                 `pwsh -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
                 "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
-            let paths = execSync(cmdParsePath).toString().split('\n');
+            const paths = execSync(cmdParsePath).toString().split('\n');
             paths.pop();
             paths.forEach(async function (onePath, index, pathList) {
-                pathList[index] = posix.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep);;
+                pathList[index] = posix.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep);
             });
 
             if (paths.length > 0 && paths.length !== 1) {
                 vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
-                let tmp = await vscode.window.showQuickPick(paths);
+                const tmp = await vscode.window.showQuickPick(paths);
                 if (tmp) {
                     return tmp;
                 }
@@ -93,7 +93,7 @@ export abstract class OneApiEnv {
                 return `${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
             }
             // 3.check in global installation path
-            let globalSetvarsPath = process.platform === 'win32' ?
+            const globalSetvarsPath = process.platform === 'win32' ?
                 `${process.env['ProgramFiles(x86)']}\\Intel\\oneAPI\\setvars.bat` :
                 '/opt/intel/oneapi/setvars.sh';
             if (existsSync(globalSetvarsPath)) {
@@ -107,11 +107,11 @@ export abstract class OneApiEnv {
                     }
                     //5.check in local-custom installation path
                     //Path does not require normalization because it is generated only for Linux
-                    let paths = execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
+                    const paths = execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
                     paths.pop();
                     if (paths.length > 0 && paths.length !== 1) {
                         vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
-                        let tmp = await vscode.window.showQuickPick(paths);
+                        const tmp = await vscode.window.showQuickPick(paths);
                         if (tmp) {
                             return tmp;
                         }
@@ -137,7 +137,7 @@ export abstract class OneApiEnv {
             vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
             args = `--config="${setvarsConfigPath}"`;
         }
-        let cmd = process.platform === 'win32' ?
+        const cmd = process.platform === 'win32' ?
             `"${fspath}" ${args} > NULL && set` :
             `bash -c ". ${fspath} ${args}  > /dev/null && env -0"`;
 
@@ -162,7 +162,7 @@ export abstract class OneApiEnv {
                 this.collection.clear();
                 return;
             }
-            let childProcess = exec(cmd)
+            const childProcess = exec(cmd)
                 .on("close", (code, signal) => {
                     if (code || signal) {
                         this.collection.clear();
@@ -177,11 +177,11 @@ export abstract class OneApiEnv {
                 });
             childProcess.stdout?.on("data", (d: string) => {
                 const separator = process.platform === 'win32' ? '\n' : '\u0000';
-                let vars = d.split(separator);
+                const vars = d.split(separator);
                 vars.forEach(async (l) => {
-                    let e = l.indexOf('=');
-                    let k = <string>l.substr(0, e);
-                    let v = <string>l.substr((e + 1)).replace(`\r`, "");
+                    const e = l.indexOf('=');
+                    const k = <string>l.substr(0, e);
+                    const v = <string>l.substr((e + 1)).replace(`\r`, "");
 
                     if (k === "" || v === "") {
                         return;
@@ -197,7 +197,7 @@ export abstract class OneApiEnv {
                     process.env[k] = v;
                 });
             });
-            token.onCancellationRequested(_ => childProcess.kill());
+            token.onCancellationRequested(() => childProcess.kill());
         });
     }
 
@@ -213,7 +213,7 @@ export abstract class OneApiEnv {
 
     protected async restoreVscodeEnv(): Promise<void> {
         this.collection.forEach((k) => {
-            let oldVarValue = this.initialEnv.get(k);
+            const oldVarValue = this.initialEnv.get(k);
             if (!oldVarValue) {
                 delete process.env[k];
             } else {
@@ -233,22 +233,22 @@ export class SingleRootEnv extends OneApiEnv {
         if (this.collection.get('SETVARS_COMPLETED')) {
             vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Clear environment variables' or choose a different working directory for initialization", { modal: true });
             return;
-        };
+        }
         if (process.env.SETVARS_COMPLETED) {
             await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
-            let dialogOptions: string[] = [];
+            const dialogOptions: string[] = [];
             dialogOptions.push('Skip');
             dialogOptions.push('Continue');
-            let options: vscode.InputBoxOptions = {
+            const options: vscode.InputBoxOptions = {
                 placeHolder: `Continue initializing the oneAPI environment?`
             };
-            let selection = await vscode.window.showQuickPick(dialogOptions, options);
+            const selection = await vscode.window.showQuickPick(dialogOptions, options);
             if (selection !== 'Continue') {
                 return;
             }
         }
         await this.getEnvironment();
-    };
+    }
 
     async clearEnvironment(): Promise<void> {
         if (!this.collection.get('SETVARS_COMPLETED')) {
@@ -258,7 +258,7 @@ export class SingleRootEnv extends OneApiEnv {
         await this.restoreVscodeEnv();
         this.collection.clear();
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
-    };
+    }
 
     async switchEnv(): Promise<boolean> {
         vscode.window.showErrorMessage('"Switch environment" command is only available if your workspace is multiroot', { modal: true });
@@ -282,10 +282,10 @@ export class MultiRootEnv extends OneApiEnv {
         this.updateFoldersInStorage();
 
         context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(event => {
-            for (let folder of event.added) {
+            for (const folder of event.added) {
                 this.addEnv(folder.uri.toString());
             }
-            for (let folder of event.removed) {
+            for (const folder of event.removed) {
                 this.removeEnv(folder.uri.toString());
             }
         }));
@@ -303,30 +303,30 @@ export class MultiRootEnv extends OneApiEnv {
         if (this.collection.get('SETVARS_COMPLETED')) {
             vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Clear environment variables' or choose a different working directory for initialization", { modal: true });
             return;
-        };
+        }
         if (process.env.SETVARS_COMPLETED) {
             await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
-            let dialogOptions: string[] = [];
+            const dialogOptions: string[] = [];
             dialogOptions.push('Skip');
             dialogOptions.push('Continue');
-            let options: vscode.InputBoxOptions = {
+            const options: vscode.InputBoxOptions = {
                 placeHolder: `Continue initializing the oneAPI environment?`
             };
-            let selection = await vscode.window.showQuickPick(dialogOptions, options);
+            const selection = await vscode.window.showQuickPick(dialogOptions, options);
             if (selection !== 'Continue') {
                 return;
             }
         }
         if (await this.getEnvironment()) {
             if (this.activeDir) {
-                let activeEnv = new Map();
+                const activeEnv = new Map();
                 this.collection.forEach((k, m) => {
                     activeEnv.set(k, m.value);
                 });
                 await this.storage.writeEnvToExtensionStorage(this.activeDir, activeEnv);
             }
         }
-    };
+    }
 
     async clearEnvironment(): Promise<void> {
         if (this.activeDir) {
@@ -336,14 +336,14 @@ export class MultiRootEnv extends OneApiEnv {
         this.collection.clear();
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
         return;
-    };
+    }
 
     async switchEnv(): Promise<boolean> {
-        let folder = await getworkspaceFolder();
+        const folder = await getworkspaceFolder();
         if (!folder || folder.uri.toString() === this.activeDir) {
             return false;
         }
-        let activeDir = folder?.uri.toString();
+        const activeDir = folder?.uri.toString();
         this.setActiveDir(activeDir);
         await this.storage.set("activeDir", activeDir);
         await this.applyEnv(activeDir);
@@ -367,11 +367,11 @@ export class MultiRootEnv extends OneApiEnv {
     private async applyEnv(folder: string): Promise<boolean> {
         this.restoreVscodeEnv();
         this.collection.clear();
-        let env = await this.storage.readEnvFromExtensionStorage(folder);
+        const env = await this.storage.readEnvFromExtensionStorage(folder);
         if (!env || env.size === 0) {
             return false;
         }
-        for (let keyValuePair of env) {
+        for (const keyValuePair of env) {
             this.collection.append(keyValuePair[0], keyValuePair[1]);
             process.env[keyValuePair[0]] = keyValuePair[1];
         }
@@ -381,8 +381,8 @@ export class MultiRootEnv extends OneApiEnv {
     private setActiveDir(dir: string | undefined): void {
         this.activeDir = dir;
         if (dir) {
-            let activeDirUri = vscode.Uri.parse(dir);
-            let activeDirName = vscode.workspace.getWorkspaceFolder(activeDirUri)?.name;
+            const activeDirUri = vscode.Uri.parse(dir);
+            const activeDirName = vscode.workspace.getWorkspaceFolder(activeDirUri)?.name;
             if (activeDirName) {
                 this.statusBarItem.text = "Active environment: ".concat(activeDirName);
             }
@@ -405,7 +405,7 @@ export class MultiRootEnv extends OneApiEnv {
 
     private updateFoldersInStorage(): void {
         vscode.workspace.workspaceFolders?.forEach(async folder => {
-            let env = await this.storage.readEnvFromExtensionStorage(folder.uri.toString());
+            const env = await this.storage.readEnvFromExtensionStorage(folder.uri.toString());
             if (!env) {
                 await this.addEnv(folder.uri.toString());
             }
@@ -416,7 +416,7 @@ async function getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined>
     if (vscode.workspace.workspaceFolders?.length === 1) {
         return vscode.workspace.workspaceFolders[0];
     }
-    let selection = await vscode.window.showWorkspaceFolderPick();
+    const selection = await vscode.window.showWorkspaceFolderPick();
     if (!selection) {
         vscode.window.showErrorMessage("Cannot find the working directory.", { modal: true });
         vscode.window.showInformationMessage("Please add one or more working directories and try again.");
