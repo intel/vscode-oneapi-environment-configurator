@@ -9,13 +9,13 @@
 import * as vscode from 'vscode';
 import { DevFlow } from './devFlow';
 
-export function activate(context: vscode.ExtensionContext) {
-	let devFlof = new DevFlow(context);
+export function activate(context: vscode.ExtensionContext): void {
+	const devFlof = new DevFlow(context);
 	context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.initializeEnvironment', () => devFlof.environment.initializeEnvironment()));
 	context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.clearEnvironment', () => devFlof.environment.clearEnvironment()));
 	context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.switchEnv', () => devFlof.environment.switchEnv()));
 }
 
-export function deactivate() {
+export function deactivate(): void {
 	console.log("Environment Configurator for Intel oneAPI Toolkits: Goodbye");
 }
