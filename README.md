@@ -1,17 +1,17 @@
-# Environment configurator for Intel® oneAPI Toolkits
+# Environment configurator for Intel(R) oneAPI Toolkits
 
 #### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://software.intel.com/content/www/us/en/develop/documentation/using-vs-code-with-intel-oneapi/using-the-environment-and-launch-configurator-extension.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
-This extension configures the system environment and settings for Intel® oneAPI toolkits and their products.
+This extension configures the system environment and settings for Intel(R) oneAPI toolkits and their products.
 ***
 
 ## Set oneAPI Environment
-1.	Press `Ctrl+Shift+P ( or View -> Command Palette… )` to open the Command Palette.
+1.	Press `Ctrl+Shift+P ( or View -> Command Palette... )` to open the Command Palette.
 2.	Type **Intel oneAPI** to view options of the installed extensions.
 3.	Click on `Intel oneAPI: Initialize environment variables`.
 4.	In the case of multiple folders in workspace, select the appropriate one. All tasks, launches, and terminals created from VS Code will now contain the oneAPI environment.
 5.	In cases where multiple environments are required repeat the previous steps by selecting a different working folder in workspace.
-6.	To switch the environment сlick on `Intel oneAPI: Switch environment` select the folder that the environment is associated with.
+6.	To switch the environment click on `Intel oneAPI: Switch environment` select the folder that the environment is associated with.
 7.	To delete the oneAPI environment, open the Command Pallette and select `Intel oneAPI: Clear environment variables`
 
 * The current environment applies to all tasks, launch and new terminals, regardless of which folder it was originally associated with.
