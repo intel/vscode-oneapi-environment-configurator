@@ -29,6 +29,7 @@ export abstract class OneApiEnv {
 
     abstract initializeEnvironment(): Promise<void>;
     abstract clearEnvironment(): void;
+    abstract switchEnv(): Promise<boolean>;
 
     protected async getEnvironment(): Promise<boolean | undefined> {
         const setvarsPath = await this.findSetvarsPath();
@@ -258,6 +259,11 @@ export class SingleRootEnv extends OneApiEnv {
         this.collection.clear();
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
     };
+
+    async switchEnv(): Promise<boolean> {
+        vscode.window.showErrorMessage('"Switch environment" command is only available if your workspace is multiroot', { modal: true });
+        return true;
+    }
 }
 
 export class MultiRootEnv extends OneApiEnv {
@@ -283,7 +289,6 @@ export class MultiRootEnv extends OneApiEnv {
                 this.removeEnv(folder.uri.toString());
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.switchEnv', () => this.switchEnv()));
     }
 
     async initializeEnvironment(): Promise<void> {
@@ -333,6 +338,19 @@ export class MultiRootEnv extends OneApiEnv {
         return;
     };
 
+    async switchEnv(): Promise<boolean> {
+        let folder = await getworkspaceFolder();
+        if (!folder || folder.uri.toString() === this.activeDir) {
+            return false;
+        }
+        let activeDir = folder?.uri.toString();
+        this.setActiveDir(activeDir);
+        await this.storage.set("activeDir", activeDir);
+        await this.applyEnv(activeDir);
+        vscode.window.showInformationMessage(`Working directory selected: ${folder?.name}`);
+        return true;
+    }
+
     private async addEnv(folder: string): Promise<void> {
         await this.storage.writeEnvToExtensionStorage(folder, new Map());
     }
@@ -344,19 +362,6 @@ export class MultiRootEnv extends OneApiEnv {
             this.collection.clear();
         }
         await this.storage.writeEnvToExtensionStorage(folder, undefined);
-    }
-
-    private async switchEnv(): Promise<boolean> {
-        let folder = await getworkspaceFolder();
-        if (!folder || folder.uri.toString() === this.activeDir) {
-            return false;
-        }
-        let activeDir = folder?.uri.toString();
-        this.setActiveDir(activeDir);
-        await this.storage.set("activeDir", activeDir);
-        await this.applyEnv(activeDir);
-        vscode.window.showInformationMessage(`Working directory selected: ${folder?.name}`);
-        return true;
     }
 
     private async applyEnv(folder: string): Promise<boolean> {
