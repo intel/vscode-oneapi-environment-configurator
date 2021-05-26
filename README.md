@@ -9,7 +9,7 @@ This extension configures the system environment and settings for Intel oneAPI t
 Before you start, make sure that you have oneAPI BaseKit or other installed.
 For more information, see sections **Intel oneAPI toolkits and components** and **Other extensions for oneAPI**.
 - Launch the command palette to access the options:
-    * Press `Ctrl+Shift+P` ( or `View -> Command Palette…` ) and type Intel oneAPI.
+    * Press `Ctrl+Shift+P` ( or `View -> Command Palette...` ) and type Intel oneAPI.
 - Adding and removing oneAPI environments for local and remote cases:
     * Choose the option `Intel oneAPI: Initialize environment variables`.
     * All tasks, launches, and terminals created after that will contain the oneAPI environment.
@@ -26,8 +26,8 @@ For more information, see sections **Intel oneAPI toolkits and components** and 
 * General links: 
     - [oneAPI page](https://software.intel.com/en-us/oneapi)
 * To get started with oneAPI development may be useful:
-    - [Installing Intel® oneAPI Toolkits via APT](https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html)
-    - [Remote Visual Studio Code Development with Intel® oneAPI Toolkits on Linux](https://software.intel.com/content/www/us/en/develop/documentation/remote-vscode-development-on-linux/top.html)
+    - [Installing Intel(R) oneAPI Toolkits via APT](https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html)
+    - [Remote Visual Studio Code Development with Intel(R) oneAPI Toolkits on Linux](https://software.intel.com/content/www/us/en/develop/documentation/remote-vscode-development-on-linux/top.html)
     - [Remote Visual Studio Code Development with oneAPI on Windows Subsystem for Linux](https://software.intel.com/content/www/us/en/develop/documentation/remote-vscode-development-on-wsl/top.html)
     - [Using Visual Studio Code with DevCloud](https://devcloud.intel.com/oneapi/documentation/connect-with-vscode/)
 
