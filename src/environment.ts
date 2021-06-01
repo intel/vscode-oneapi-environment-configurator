@@ -27,11 +27,12 @@ export abstract class OneApiEnv {
         }));
     }
 
-    abstract initializeEnvironment(): Promise<void>;
+    abstract initializeDefaultEnvironment(): Promise<void>;
+    abstract initializeCustomEnvironment(): Promise<void>;
     abstract clearEnvironment(): void;
     abstract switchEnv(): Promise<boolean>;
 
-    protected async getEnvironment(): Promise<boolean | undefined> {
+    protected async getEnvironment(isDefault: boolean): Promise<boolean | undefined> {
         const setvarsPath = await this.findSetvarsPath();
         if (!setvarsPath) {
             vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
@@ -44,14 +45,15 @@ export abstract class OneApiEnv {
 
             const setVarsFileUri = await vscode.window.showOpenDialog(options);
             if (setVarsFileUri && setVarsFileUri[0]) {
-                return await this.runSetvars(setVarsFileUri[0].fsPath);
+                return await this.runSetvars(setVarsFileUri[0].fsPath, isDefault);
             } else {
                 vscode.window.showErrorMessage(`Path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} invalid, The oneAPI environment was not be applied.\n Please check setvars.${process.platform === 'win32' ? 'bat' : 'sh'} and try again.`, { modal: true });
                 return false;
             }
         } else {
             vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
-            return await this.runSetvars(setvarsPath);
+            return await this.runSetvars(setvarsPath, isDefault);
+
         }
     }
 
@@ -130,12 +132,14 @@ export abstract class OneApiEnv {
         }
     }
 
-    private async runSetvars(fspath: string): Promise<boolean> {
-        const setvarsConfigPath = this.getSetvarsConfigPath();
+    private async runSetvars(fspath: string, isDefault: boolean): Promise<boolean> {
         let args = '';
-        if (setvarsConfigPath) {
-            vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
-            args = `--config="${setvarsConfigPath}"`;
+        if (!isDefault) {
+            const setvarsConfigPath = this.getSetvarsConfigPath();
+            if (setvarsConfigPath) {
+                vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
+                args = `--config="${setvarsConfigPath}"`;
+            }
         }
         const cmd = process.platform === 'win32' ?
             `"${fspath}" ${args} > NULL && set` :
@@ -229,12 +233,20 @@ export class SingleRootEnv extends OneApiEnv {
         super(context);
     }
 
-    async initializeEnvironment(): Promise<void> {
+    async initializeDefaultEnvironment(): Promise<void> {
+        this.initializeEnvironment(true);
+    }
+
+    async initializeCustomEnvironment(): Promise<void> {
+        this.initializeEnvironment(false);
+    }
+
+    private async initializeEnvironment(isDefault: boolean): Promise<void> {
         if (this.collection.get('SETVARS_COMPLETED')) {
             vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Clear environment variables' or choose a different working directory for initialization", { modal: true });
             return;
         }
-        if (process.env.SETVARS_COMPLETED) {
+        if (this.initialEnv.get("SETVARS_COMPLETED")) {
             await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
             const dialogOptions: string[] = [];
             dialogOptions.push('Skip');
@@ -247,7 +259,7 @@ export class SingleRootEnv extends OneApiEnv {
                 return;
             }
         }
-        await this.getEnvironment();
+        await this.getEnvironment(isDefault);
     }
 
     async clearEnvironment(): Promise<void> {
@@ -291,7 +303,14 @@ export class MultiRootEnv extends OneApiEnv {
         }));
     }
 
-    async initializeEnvironment(): Promise<void> {
+    async initializeDefaultEnvironment(): Promise<void> {
+        this.initializeEnvironment(true);
+    }
+
+    async initializeCustomEnvironment(): Promise<void> {
+        this.initializeEnvironment(false);
+    }
+    async initializeEnvironment(isDefault: boolean): Promise<void> {
         if (!this.activeDir) {
             vscode.window.showInformationMessage("Select the directory for which the environment will be set. Note that the environment applies to all tasks, launch configs, and new terminals, regardless of which folder it was originally associated with.");
             if (await this.switchEnv() !== true) {
@@ -304,7 +323,7 @@ export class MultiRootEnv extends OneApiEnv {
             vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Clear environment variables' or choose a different working directory for initialization", { modal: true });
             return;
         }
-        if (process.env.SETVARS_COMPLETED) {
+        if (this.initialEnv.get("SETVARS_COMPLETED")) {
             await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
             const dialogOptions: string[] = [];
             dialogOptions.push('Skip');
@@ -317,7 +336,8 @@ export class MultiRootEnv extends OneApiEnv {
                 return;
             }
         }
-        if (await this.getEnvironment()) {
+
+        if (await this.getEnvironment(isDefault)) {
             if (this.activeDir) {
                 const activeEnv = new Map();
                 this.collection.forEach((k, m) => {
@@ -412,6 +432,7 @@ export class MultiRootEnv extends OneApiEnv {
         });
     }
 }
+
 async function getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
     if (vscode.workspace.workspaceFolders?.length === 1) {
         return vscode.workspace.workspaceFolders[0];
