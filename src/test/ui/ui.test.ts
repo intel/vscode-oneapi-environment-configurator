@@ -2,7 +2,7 @@ import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, InputB
 import { DialogHandler } from 'vscode-extension-tester-native';
 import { expect } from 'chai';
 import { join } from 'path';
-import { mkdirSync, rmdirSync } from 'fs';
+import { writeFileSync, mkdirSync, rmdirSync } from 'fs';
 
 describe('DevFlow extension UI Tests', function () {
     const samplesPath = join(process.cwd(), 'test-resources', 'samples');
@@ -65,6 +65,7 @@ describe('DevFlow extension UI Tests', function () {
             const dialog = await DialogHandler.getOpenDialog();
             await dialog.selectPath(samplesPath);
             await dialog.confirm();
+            createSetvarsConfig(samplesPath);
         });
 
         describe('Default Initialize', function () {
@@ -85,6 +86,29 @@ describe('DevFlow extension UI Tests', function () {
                 await dialog.pushButton('OK');
 
                 const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment script'); }, 10000) as Notification;
+                expect(await notification.getType()).equals(NotificationType.Info);
+            });
+        });
+
+        describe('Custom Initialize', function () {
+            it('Quick pick contain command', async function () {
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
+                await input.setText('>Intel oneAPI: Initialize custom environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize custom environment variables');
+                expect(pick).not.undefined;
+            });
+
+            it('Command shows a notification with the correct text', async function () {
+                const workbench = new Workbench();
+                await workbench.executeCommand('Intel oneAPI: Clear environment variables');
+                await workbench.executeCommand('Intel oneAPI: Initialize custom environment variables');
+                await driver.sleep(1000);
+                // close the dialog after setting the environment
+                const dialog = new ModalDialog();
+                await dialog.pushButton('OK');
+
+                const notification = await driver.wait(async () => { return await getNotifications('The config file found'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
@@ -118,6 +142,7 @@ describe('DevFlow extension UI Tests', function () {
             const dialog = await DialogHandler.getOpenDialog();
             await dialog.selectPath(emptyFolderPath);
             await dialog.confirm();
+            createSetvarsConfig(emptyFolderPath);
         });
 
         describe('Intel oneAPI: Switch environment', function () {
@@ -201,4 +226,17 @@ async function getNotifications(text: string): Promise<Notification | undefined>
             return notification;
         }
     }
+}
+
+function createSetvarsConfig(path: string): void {
+    const configContent = 'default=exclude\nmkl=latest\nipp=latest';
+    const configPath = join(path, 'oneAPIconfig.txt');
+    writeFileSync(configPath, configContent);
+
+    const vscodeFolderPath = join(path, '.vscode');
+    mkdirSync(vscodeFolderPath, { recursive: true });
+    const settingsJsonContent = `{\n"SETVARS_CONFIG":"${configPath}"\n}`;
+    const settingsJsonPath = join(vscodeFolderPath, 'settings.json');
+    writeFileSync(settingsJsonPath, settingsJsonContent);
+
 }
