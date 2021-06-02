@@ -60,8 +60,12 @@ export abstract class OneApiEnv {
     private getSetvarsConfigPath(): string | undefined {
         const oneAPIConfiguration = vscode.workspace.getConfiguration();
         const setvarsConfigPath: string | undefined = oneAPIConfiguration.get("SETVARS_CONFIG");
-        if (setvarsConfigPath && !existsSync(setvarsConfigPath)) {
-            vscode.window.showErrorMessage('The path to the config file specified in SETVARS_CONFIG is not valid, so it is ignored');
+        if (!setvarsConfigPath) {
+            vscode.window.showErrorMessage('Settings.json does not contain SETVARS_CONFIG variable with path to the config. The oneAPI environment was not be applied', { modal: true });
+            return undefined;
+        }
+        if (!existsSync(setvarsConfigPath)) {
+            vscode.window.showErrorMessage('The path to the config file specified in SETVARS_CONFIG is not valid. The oneAPI environment was not be applied', { modal: true });
             return undefined;
         }
         return setvarsConfigPath;
@@ -139,6 +143,8 @@ export abstract class OneApiEnv {
             if (setvarsConfigPath) {
                 vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
                 args = `--config="${setvarsConfigPath}"`;
+            } else {
+                return false;
             }
         }
         const cmd = process.platform === 'win32' ?
