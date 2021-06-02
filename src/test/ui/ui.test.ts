@@ -2,29 +2,32 @@ import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, InputB
 import { DialogHandler } from 'vscode-extension-tester-native';
 import { expect } from 'chai';
 import { join } from 'path';
+import { mkdirSync, rmdirSync } from 'fs';
 
 describe('DevFlow extension UI Tests', function () {
     const samplesPath = join(process.cwd(), 'test-resources', 'samples');
     let driver: WebDriver;
     before(async () => {
+        mkdirSync(samplesPath, { recursive: true });
         driver = VSBrowser.instance.driver;
         const workbench = new Workbench();
         await workbench.executeCommand('Intel oneAPI: Clear environment variables');
         await driver.sleep(1000);
     });
+
     describe('Without workspace', function () {
-        describe('Intel oneAPI: Initialize environment variables', function () {
+        describe('Default Initialize', function () {
             it('Quick pick contain command', async function () {
                 const workbench = new Workbench();
                 const input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize environment variables');
+                await input.setText('>Intel oneAPI: Initialize default environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
                 const workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize environment variables');
+                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
                 await driver.sleep(1000);
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
@@ -64,18 +67,18 @@ describe('DevFlow extension UI Tests', function () {
             await dialog.confirm();
         });
 
-        describe('Intel oneAPI: Initialize environment variables', function () {
+        describe('Default Initialize', function () {
             it('Quick pick contain command', async function () {
                 const workbench = new Workbench();
                 const input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize environment variables');
+                await input.setText('>Intel oneAPI: Initialize default environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
                 const workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize environment variables');
+                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
                 await driver.sleep(1000);
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
@@ -107,15 +110,16 @@ describe('DevFlow extension UI Tests', function () {
     });
 
     describe('With multi-root workspace', function () {
+        const emptyFolderPath = join(process.cwd(), 'test-resources', 'tmp');
         before(async () => {
             const workbench = new Workbench();
-            const emptyFolderPath = join(process.cwd(), 'test-resources', 'tmp');
+            mkdirSync(emptyFolderPath, { recursive: true });
             await workbench.executeCommand('Workspaces: Add Folder to Workspace');
             const dialog = await DialogHandler.getOpenDialog();
             await dialog.selectPath(emptyFolderPath);
             await dialog.confirm();
         });
-        
+
         describe('Intel oneAPI: Switch environment', function () {
             it('Quick pick contain command', async function () {
                 const workbench = new Workbench();
@@ -137,18 +141,18 @@ describe('DevFlow extension UI Tests', function () {
             });
         });
 
-        describe('Intel oneAPI: Initialize environment variables', function () {
+        describe('Default Initialize', function () {
             it('Quick pick contain command', async function () {
                 const workbench = new Workbench();
                 const input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize environment variables');
+                await input.setText('>Intel oneAPI: Initialize default environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
                 const workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize environment variables');
+                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
                 await driver.sleep(1000);
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
@@ -177,6 +181,14 @@ describe('DevFlow extension UI Tests', function () {
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
+
+        after(async () => {
+            rmdirSync(emptyFolderPath, { recursive: true });
+        });
+    });
+
+    after(async () => {
+        rmdirSync(samplesPath, { recursive: true });
     });
 });
 
