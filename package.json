@@ -17,21 +17,51 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [
+		"configuration": [
 			{
-				"command": "intel-corporation.oneapi-environment-variables.initializeEnvironment",
-				"title": "Intel oneAPI: Initialize environment variables"
-			},
-			{
-				"command": "intel-corporation.oneapi-environment-variables.clearEnvironment",
-				"title": "Intel oneAPI: Clear environment variables"
-			},
-			{
-				"command": "intel-corporation.oneapi-environment-variables.switchEnv",
-				"title": "Intel oneAPI: Switch environment"
+				"title": "Environment Configurator for Intel oneAPI Toolkits",
+				"properties": {
+					"intel-corporation.oneapi-environment-variables.ONEAPI_ROOT": {
+						"type": "array",
+						"default": [],
+						"description": "Absolute path to oneAPI installation folder.\n\nSpecifies the absolute pathname to your oneAPI installation. This path is useful if the oneAPI environment extension is unable to automatically locate your oneAPI setvars script. This is most likely to happen if you have customized the location of your oneAPI install. Note that, by default, this setting only applies if the automatic search for the oneAPI setvars script fails.\n\n",
+						"items": {
+						  "type": "string"
+						},
+						"scope": "resource"
+					  },
+					  "intel-corporation.oneapi-environment-variables.ONEAPI_ROOT-default": {
+						"type": "boolean",
+						"default": false,
+						"description": "If true, use path in ONEAPI_ROOT setting to locate oneAPI installation.\n\nDefaults to 'false' – meaning that the automatic search for the oneAPI install folder has priority and the location specified by the ONEAPI_ROOT setting is used only if the search for the setvars script fails. Setting this to 'true' forces the oneAPI environment setup to always use the pathname specified by the ONEAPI_ROOT setting to locate the setvars environment setup script.\n"
+					},
+					"intel-corporation.oneapi-environment-variables.SETVARS_CONFIG": {
+						"type": "array",
+						"default": [],
+						"description": "Name of a custom setvars configuration file.\n\nSpecify the name of a setvars configuration file. The oneAPI setvars environment setup script normally initializes the 'latest' version of each installed oneAPI component (tools and libraries). This default behavior can be overridden by way of a 'setvars config file'. If no pathname is specified (only a filename is provided) the config file is assumed to be located in the ${workspaceFolder}/.vscode/ directory; otherwise, if a pathname+filename is provided the config file will be located as named.\nRead more about this feature for [Linux and macOS](https://software.intel.com/) and for [Windows](https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/).\n",
+						"items": {
+						  "type": "string"
+						},
+						"scope": "resource"
+					  }
+				}
 			}
 		]
 	},
+	"commands": [
+		{
+			"command": "intel-corporation.oneapi-environment-variables.initializeEnvironment",
+			"title": "Intel oneAPI: Initialize environment variables"
+		},
+		{
+			"command": "intel-corporation.oneapi-environment-variables.clearEnvironment",
+			"title": "Intel oneAPI: Clear environment variables"
+		},
+		{
+			"command": "intel-corporation.oneapi-environment-variables.switchEnv",
+			"title": "Intel oneAPI: Switch environment"
+		}
+	],
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
