@@ -8,7 +8,7 @@ This extension configures the system environment and settings for Intel(R) oneAP
 ## Set oneAPI Environment
 1.	Press `Ctrl+Shift+P ( or View -> Command Palette... )` to open the Command Palette.
 2.	Type **Intel oneAPI** to view options of the installed extensions.
-3.	Click on `Intel oneAPI: Initialize environment variables`.
+3.	Click on `Intel oneAPI: Initialize default environment variables`.
 4.	In the case of multiple folders in workspace, select the appropriate one. All tasks, launches, and terminals created from VS Code will now contain the oneAPI environment.
 5.	In cases where multiple environments are required repeat the previous steps by selecting a different working folder in workspace.
 6.	To switch the environment click on `Intel oneAPI: Switch environment` select the folder that the environment is associated with.
@@ -24,6 +24,7 @@ You can limit the initialization of the environment to a specific set of oneAPI 
     "SETVARS_CONFIG": "full/path/to/your/config.txt"
 }
 ```
+Then open the Command Pallette and select `Intel oneAPI: Initialize custom environment variables`
 
 ## Contributing 
 Install Visual Studio Code (at least version 1.46) and open this project within it.

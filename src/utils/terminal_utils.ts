@@ -11,6 +11,6 @@ import * as vscode from 'vscode';
 export async function checkExistingTerminals(): Promise<boolean | undefined> {
     if (vscode.window.terminals !== undefined) {
         await vscode.window.showInformationMessage(`Please note that all newly created terminals after environment setup will contain oneAPI environment`, { modal: true });
-    };
+    }
     return true;
 }
