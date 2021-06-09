@@ -253,17 +253,8 @@ export class SingleRootEnv extends OneApiEnv {
             return;
         }
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
-            await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
-            const dialogOptions: string[] = [];
-            dialogOptions.push('Skip');
-            dialogOptions.push('Continue');
-            const options: vscode.InputBoxOptions = {
-                placeHolder: `Continue initializing the oneAPI environment?`
-            };
-            const selection = await vscode.window.showQuickPick(dialogOptions, options);
-            if (selection !== 'Continue') {
-                return;
-            }
+            await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
+            return;
         }
         await this.getEnvironment(isDefault);
     }
@@ -330,17 +321,8 @@ export class MultiRootEnv extends OneApiEnv {
             return;
         }
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
-            await vscode.window.showWarningMessage("oneAPI environment has already been initialized outside of the configurator. Environment management features will not be available until reinitialized with 'Intel oneAPI: Set oneAPI environment'.", { modal: true });
-            const dialogOptions: string[] = [];
-            dialogOptions.push('Skip');
-            dialogOptions.push('Continue');
-            const options: vscode.InputBoxOptions = {
-                placeHolder: `Continue initializing the oneAPI environment?`
-            };
-            const selection = await vscode.window.showQuickPick(dialogOptions, options);
-            if (selection !== 'Continue') {
-                return;
-            }
+            await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
+            return;
         }
 
         if (await this.getEnvironment(isDefault)) {
