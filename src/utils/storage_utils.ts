@@ -16,7 +16,7 @@ export class Storage {
     get(key: string): string | undefined {
         return this.storage.get(key);
     }
-    async set(key: string, value: string | undefined) {
+    async set(key: string, value: string | undefined): Promise<void> {
         await this.storage.update(key, value);
     }
 
@@ -25,19 +25,19 @@ export class Storage {
             await this.storage.update(k, v);
             return;
         }
-        let tmp = [...v.entries()];
-        let jsonString = JSON.stringify(tmp);
+        const tmp = [...v.entries()];
+        const jsonString = JSON.stringify(tmp);
         await this.storage.update(k, jsonString);
     }
 
     async readEnvFromExtensionStorage(k: string): Promise<Map<string, string> | undefined> {
-        let jsonString: string | undefined = await this.storage.get(k);
+        const jsonString: string | undefined = await this.storage.get(k);
         if (!jsonString) {
             return undefined;
         }
-        let tmp: [string, string][] = JSON.parse(jsonString);
-        let result: Map<string, string> = new Map();
-        for (let val of tmp) {
+        const tmp: [string, string][] = JSON.parse(jsonString);
+        const result: Map<string, string> = new Map();
+        for (const val of tmp) {
             result.set(val[0], val[1]);
         }
         return result;

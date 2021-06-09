@@ -1,30 +1,33 @@
-import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, ActivityBar, InputBox, ModalDialog } from 'vscode-extension-tester';
+import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, InputBox, ModalDialog } from 'vscode-extension-tester';
 import { DialogHandler } from 'vscode-extension-tester-native';
 import { expect } from 'chai';
 import { join } from 'path';
+import { writeFileSync, mkdirSync, rmdirSync } from 'fs';
 
 describe('DevFlow extension UI Tests', function () {
     const samplesPath = join(process.cwd(), 'test-resources', 'samples');
     let driver: WebDriver;
     before(async () => {
+        mkdirSync(samplesPath, { recursive: true });
         driver = VSBrowser.instance.driver;
-        let workbench = new Workbench();
+        const workbench = new Workbench();
         await workbench.executeCommand('Intel oneAPI: Clear environment variables');
         await driver.sleep(1000);
     });
+
     describe('Without workspace', function () {
-        describe('Intel oneAPI: Initialize environment variables', function () {
+        describe('Default Initialize', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize environment variables');
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
+                await input.setText('>Intel oneAPI: Initialize default environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize environment variables');
+                const workbench = new Workbench();
+                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
                 await driver.sleep(1000);
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
@@ -37,15 +40,15 @@ describe('DevFlow extension UI Tests', function () {
 
         describe('Intel oneAPI: Clear environment variables', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
                 await input.setText('>Intel oneAPI: Clear environment variables');
                 const pick = await input.findQuickPick('Intel oneAPI: Clear environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
+                const workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Clear environment variables');
                 await driver.sleep(1000);
                 const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 10000) as Notification;
@@ -57,25 +60,26 @@ describe('DevFlow extension UI Tests', function () {
 
     describe('With single-root workspace', function () {
         before(async () => {
-            let workbench = new Workbench();
+            const workbench = new Workbench();
             await workbench.executeCommand('File: Open Folder');
             const dialog = await DialogHandler.getOpenDialog();
             await dialog.selectPath(samplesPath);
             await dialog.confirm();
+            createSetvarsConfig(samplesPath);
         });
 
-        describe('Intel oneAPI: Initialize environment variables', function () {
+        describe('Default Initialize', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize environment variables');
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
+                await input.setText('>Intel oneAPI: Initialize default environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize environment variables');
+                const workbench = new Workbench();
+                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
                 await driver.sleep(1000);
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
@@ -86,17 +90,40 @@ describe('DevFlow extension UI Tests', function () {
             });
         });
 
+        describe('Custom Initialize', function () {
+            it('Quick pick contain command', async function () {
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
+                await input.setText('>Intel oneAPI: Initialize custom environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize custom environment variables');
+                expect(pick).not.undefined;
+            });
+
+            it('Command shows a notification with the correct text', async function () {
+                const workbench = new Workbench();
+                await workbench.executeCommand('Intel oneAPI: Clear environment variables');
+                await workbench.executeCommand('Intel oneAPI: Initialize custom environment variables');
+                await driver.sleep(1000);
+                // close the dialog after setting the environment
+                const dialog = new ModalDialog();
+                await dialog.pushButton('OK');
+
+                const notification = await driver.wait(async () => { return await getNotifications('The config file found'); }, 10000) as Notification;
+                expect(await notification.getType()).equals(NotificationType.Info);
+            });
+        });
+
         describe('Intel oneAPI: Clear environment variables', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
                 await input.setText('>Intel oneAPI: Clear environment variables');
                 const pick = await input.findQuickPick('Intel oneAPI: Clear environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
+                const workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Clear environment variables');
                 await driver.sleep(1000);
                 const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 10000) as Notification;
@@ -107,27 +134,29 @@ describe('DevFlow extension UI Tests', function () {
     });
 
     describe('With multi-root workspace', function () {
+        const emptyFolderPath = join(process.cwd(), 'test-resources', 'tmp');
         before(async () => {
-            let workbench = new Workbench();
-            let emptyFolderPath = join(process.cwd(), 'test-resources', 'tmp');
+            const workbench = new Workbench();
+            mkdirSync(emptyFolderPath, { recursive: true });
             await workbench.executeCommand('Workspaces: Add Folder to Workspace');
             const dialog = await DialogHandler.getOpenDialog();
             await dialog.selectPath(emptyFolderPath);
             await dialog.confirm();
+            createSetvarsConfig(emptyFolderPath);
         });
-        
+
         describe('Intel oneAPI: Switch environment', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
                 await input.setText('>Intel oneAPI: Switch environment');
                 const pick = await input.findQuickPick('Intel oneAPI: Switch environment');
                 expect(pick).not.undefined;
             });
 
             it('Switching directory shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
                 await input.setText('>Intel oneAPI: Switch environment');
                 await input.selectQuickPick('Intel oneAPI: Switch environment');
                 await driver.sleep(1000);
@@ -137,18 +166,18 @@ describe('DevFlow extension UI Tests', function () {
             });
         });
 
-        describe('Intel oneAPI: Initialize environment variables', function () {
+        describe('Default Initialize', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize environment variables');
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
+                await input.setText('>Intel oneAPI: Initialize default environment variables');
+                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize environment variables');
+                const workbench = new Workbench();
+                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
                 await driver.sleep(1000);
                 // close the dialog after setting the environment
                 const dialog = new ModalDialog();
@@ -161,15 +190,15 @@ describe('DevFlow extension UI Tests', function () {
 
         describe('Intel oneAPI: Clear environment variables', function () {
             it('Quick pick contain command', async function () {
-                let workbench = new Workbench();
-                let input = await workbench.openCommandPrompt() as InputBox;
+                const workbench = new Workbench();
+                const input = await workbench.openCommandPrompt() as InputBox;
                 await input.setText('>Intel oneAPI: Clear environment variables');
                 const pick = await input.findQuickPick('Intel oneAPI: Clear environment variables');
                 expect(pick).not.undefined;
             });
 
             it('Command shows a notification with the correct text', async function () {
-                let workbench = new Workbench();
+                const workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Clear environment variables');
                 await driver.sleep(1000);
                 const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 10000) as Notification;
@@ -177,6 +206,14 @@ describe('DevFlow extension UI Tests', function () {
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
+
+        after(async () => {
+            rmdirSync(emptyFolderPath, { recursive: true });
+        });
+    });
+
+    after(async () => {
+        rmdirSync(samplesPath, { recursive: true });
     });
 });
 
@@ -189,4 +226,17 @@ async function getNotifications(text: string): Promise<Notification | undefined>
             return notification;
         }
     }
+}
+
+function createSetvarsConfig(path: string): void {
+    const configContent = 'default=exclude\nmkl=latest\nipp=latest';
+    const configPath = join(path, 'oneAPIconfig.txt');
+    writeFileSync(configPath, configContent);
+
+    const vscodeFolderPath = join(path, '.vscode');
+    mkdirSync(vscodeFolderPath, { recursive: true });
+    const settingsJsonContent = `{\n"SETVARS_CONFIG":"${configPath}"\n}`;
+    const settingsJsonPath = join(vscodeFolderPath, 'settings.json');
+    writeFileSync(settingsJsonPath, settingsJsonContent);
+
 }
