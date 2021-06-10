@@ -1,8 +1,8 @@
-# Environment Configurator for Intel® oneAPI Toolkits
+# Environment Configurator for Intel(R) oneAPI Toolkits
 
 #### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://software.intel.com/content/www/us/en/develop/documentation/using-vs-code-with-intel-oneapi/using-the-environment-and-launch-configurator-extension.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
-This extension configures the system environment and settings for Intel® oneAPI toolkits and their products.
+This extension configures the system environment and settings for Intel(R) oneAPI toolkits and their products.
 ***
 
 ## Set oneAPI Environment
