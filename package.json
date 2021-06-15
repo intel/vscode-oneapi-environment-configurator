@@ -26,11 +26,6 @@
 						"default": [],
 						"description": "Absolute path to oneAPI installation folder.\n\nSpecifies the absolute pathname to your oneAPI installation. This path is useful if the oneAPI environment extension is unable to automatically locate your oneAPI setvars script. This is most likely to happen if you have customized the location of your oneAPI install. Note that, by default, this setting only applies if the automatic search for the oneAPI setvars script fails.\n\n"
 					},
-					"intel-corporation.oneapi-environment-variables.ONEAPI_ROOT-default": {
-						"type": "boolean",
-						"default": false,
-						"description": "If true, use path in ONEAPI_ROOT setting to locate oneAPI installation.\n\nDefaults to 'false' – meaning that the automatic search for the oneAPI install folder has priority and the location specified by the ONEAPI_ROOT setting is used only if the search for the setvars script fails. Setting this to 'true' forces the oneAPI environment setup to always use the pathname specified by the ONEAPI_ROOT setting to locate the setvars environment setup script.\n"
-					},
 					"intel-corporation.oneapi-environment-variables.SETVARS_CONFIG": {
 						"type": "array",
 						"default": [],

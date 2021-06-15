@@ -25,6 +25,11 @@ export class DevFlow {
                 DevFlow.setvarsConfigsPaths = vscode.workspace.getConfiguration("intel-corporation.oneapi-environment-variables").get<string[][]>('SETVARS_CONFIG');
             }
         }));
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('ONEAPI_ROOT')) {
+                DevFlow.oneAPIRootPath = vscode.workspace.getConfiguration("intel-corporation.oneapi-environment-variables").get<string>('ONEAPI_ROOT');
+            }
+        }));
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.initializeEnvironment', () => environment.initializeDefaultEnvironment()));
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.initializeEnvironmentConfig', () => environment.initializeCustomEnvironment()));
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.clearEnvironment', () => environment.clearEnvironment()));
