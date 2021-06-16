@@ -16,9 +16,33 @@ import { Storage } from './utils/storage_utils';
 export abstract class OneApiEnv {
     protected collection: vscode.EnvironmentVariableCollection;
     protected initialEnv: Map<string, string | undefined>;
+
+    private _setvarsConfigsPaths: string[] | undefined;
+    private _oneAPIRootPath: string | undefined;
+
+    public set setvarsConfigsPaths(configsPaths: string[] | undefined) {
+        if (configsPaths?.length === 0 || configsPaths === undefined) {
+            this._setvarsConfigsPaths = undefined;
+        } else {
+            configsPaths.forEach(async function (onePath, index, pathList) {
+                pathList[index] = posix.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep);
+            });
+            this._setvarsConfigsPaths = configsPaths;
+        }
+    }
+
+    public set oneAPIRootPath(rootPath: string | undefined) {
+        if (rootPath?.length === 0 || rootPath === undefined) {
+            this._oneAPIRootPath = undefined;
+        } else {
+            this._oneAPIRootPath = posix.normalize(rootPath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep);
+        }
+    }
+
     constructor(context: vscode.ExtensionContext) {
         this.initialEnv = new Map();
         this.collection = context.environmentVariableCollection;
+
         this.setupVscodeEnv();
         context.subscriptions.push(vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
             if (context.environmentVariableCollection.get('SETVARS_COMPLETED')) {
@@ -35,7 +59,7 @@ export abstract class OneApiEnv {
     protected async getEnvironment(isDefault: boolean): Promise<boolean | undefined> {
         const setvarsPath = await this.findSetvarsPath();
         if (!setvarsPath) {
-            vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'}. Provide it yourself.`);
+            vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} or the path was not selected. Provide it yourself.`);
             const options: vscode.OpenDialogOptions = {
                 canSelectMany: false,
                 filters: {
@@ -73,6 +97,32 @@ export abstract class OneApiEnv {
 
     private async findSetvarsPath(): Promise<string | undefined> {
         try {
+            // 0. Check oneAPI Root Path from setting.json
+            if (this._oneAPIRootPath) {
+                const pathToSetvars = join(this._oneAPIRootPath, `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
+                if (existsSync(pathToSetvars)) {
+                    return pathToSetvars;
+                } else {
+                    vscode.window.showErrorMessage('Could not find setvars script by the path specified for ONEAPI_ROOT in the settings. You can ignore this problem and continue with the setvars automatic search, or if it fails, specify the location manually. To fix this problem, go to the extension settings and specify the correct path for ONEAPI_ROOT.');
+                    const options: vscode.InputBoxOptions = {
+                        placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT`
+                    };
+                    const optinosItems: vscode.QuickPickItem[] = [];
+                    optinosItems.push({
+                        label: 'Continue',
+                        description: 'Try to find setvars automatically'
+                    });
+                    optinosItems.push({
+                        label: 'Skip setvars search',
+                        description: 'Allows to go directly to specifying the path to setvars'
+                    });
+
+                    const tmp = await vscode.window.showQuickPick(optinosItems, options);
+                    if (tmp?.label !== 'Continue' ) {
+                        return undefined;
+                    }
+                }
+            }
             // 1.check $PATH for setvars.sh
             const cmdParsePath = process.platform === 'win32' ?
                 `pwsh -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
@@ -84,11 +134,15 @@ export abstract class OneApiEnv {
             });
 
             if (paths.length > 0 && paths.length !== 1) {
-                vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
-                const tmp = await vscode.window.showQuickPick(paths);
-                if (tmp) {
-                    return tmp;
+                const options: vscode.InputBoxOptions = {
+                    placeHolder: `Found multiple paths to oneAPI environment script. Choose which one to use:`
+                };
+                const tmp = await vscode.window.showQuickPick(paths, options);
+                if (!tmp) {
+                    return undefined;
                 }
+                return tmp;
+
             } else {
                 if (paths.length === 1) {
                     return join(paths[0], `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
@@ -116,8 +170,10 @@ export abstract class OneApiEnv {
                     const paths = execSync("find \"${HOME}\" -mindepth 3 -maxdepth 3 -name \"setvars.sh\"").toString().split('\n');
                     paths.pop();
                     if (paths.length > 0 && paths.length !== 1) {
-                        vscode.window.showInformationMessage("Found multiple paths to oneAPI environment script. Choose which one to use.");
-                        const tmp = await vscode.window.showQuickPick(paths);
+                        const options: vscode.InputBoxOptions = {
+                            placeHolder: `Found multiple paths to oneAPI environment script. Choose which one to use:`
+                        };
+                        const tmp = await vscode.window.showQuickPick(paths, options);
                         if (tmp) {
                             return tmp;
                         }

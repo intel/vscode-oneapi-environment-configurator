@@ -11,6 +11,7 @@ import { DevFlow } from './devFlow';
 
 
 export function activate(context: vscode.ExtensionContext): void {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const devFlof = new DevFlow(context);
 }
 
