@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import * as terminal_utils from './utils/terminal_utils';
 import { execSync, exec } from 'child_process';
-import { posix, join } from 'path';
+import { posix, join, parse } from 'path';
 import { existsSync } from 'fs';
 import { Storage } from './utils/storage_utils';
 
@@ -81,18 +81,34 @@ export abstract class OneApiEnv {
         }
     }
 
-    private getSetvarsConfigPath(): string | undefined {
-        const oneAPIConfiguration = vscode.workspace.getConfiguration();
-        const setvarsConfigPath: string | undefined = oneAPIConfiguration.get("SETVARS_CONFIG");
-        if (!setvarsConfigPath) {
-            vscode.window.showErrorMessage('Settings.json does not contain SETVARS_CONFIG variable with path to the config. The oneAPI environment was not be applied', { modal: true });
-            return undefined;
+    private async getSetvarsConfigPath(): Promise<string | undefined> {
+        if (this._setvarsConfigsPaths) {
+            const options: vscode.InputBoxOptions = {
+                placeHolder: `Please select which configuration file you want to use:`
+            };
+            const optinosItems: vscode.QuickPickItem[] = [];
+            this._setvarsConfigsPaths.forEach(async function (onePath) {
+                optinosItems.push({
+                    label: parse(onePath).base,
+                    description: onePath
+                });
+            });
+            optinosItems.push({
+                label: 'Skip',
+                description: 'Do not apply the configuration file'
+            });
+            const tmp = await vscode.window.showQuickPick(optinosItems, options);
+            if (!tmp || tmp?.label === 'Skip') {
+                return undefined;
+            }
+            if (tmp?.description) {
+                if (!existsSync(tmp?.description)) {
+                    vscode.window.showErrorMessage(`Could not find the ${tmp?.label} file on the path ${tmp?.description} .  To fix this problem, go to the extension settings and specify the correct path for SETVARS_CONFIG`);
+                }
+                return tmp?.description;
+            }
         }
-        if (!existsSync(setvarsConfigPath)) {
-            vscode.window.showErrorMessage('The path to the config file specified in SETVARS_CONFIG is not valid. The oneAPI environment was not be applied', { modal: true });
-            return undefined;
-        }
-        return setvarsConfigPath;
+        return undefined;
     }
 
     private async findSetvarsPath(): Promise<string | undefined> {
@@ -118,7 +134,7 @@ export abstract class OneApiEnv {
                     });
 
                     const tmp = await vscode.window.showQuickPick(optinosItems, options);
-                    if (tmp?.label !== 'Continue' ) {
+                    if (tmp?.label !== 'Continue') {
                         return undefined;
                     }
                 }
@@ -195,12 +211,10 @@ export abstract class OneApiEnv {
     private async runSetvars(fspath: string, isDefault: boolean): Promise<boolean> {
         let args = '';
         if (!isDefault) {
-            const setvarsConfigPath = this.getSetvarsConfigPath();
+            const setvarsConfigPath = await this.getSetvarsConfigPath();
             if (setvarsConfigPath) {
                 vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
                 args = `--config="${setvarsConfigPath}"`;
-            } else {
-                return false;
             }
         }
         const cmd = process.platform === 'win32' ?

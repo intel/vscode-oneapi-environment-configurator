@@ -44,6 +44,10 @@
 				"title": "Intel oneAPI: Initialize environment variables"
 			},
 			{
+				"command": "intel-corporation.oneapi-environment-variables.initializeEnvironmentConfig",
+				"title": "Intel oneAPI: Initialize environment variables with SETVARS_CONFIG"
+			},
+			{
 				"command": "intel-corporation.oneapi-environment-variables.clearEnvironment",
 				"title": "Intel oneAPI: Clear environment variables"
 			},
