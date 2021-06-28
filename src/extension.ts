@@ -7,23 +7,15 @@
 
 'use strict';
 import * as vscode from 'vscode';
-import * as devFlow from './devFlow';
+import { DevFlow } from './devFlow';
 
-let c: vscode.ExtensionContext;
-
-export function activate(context: vscode.ExtensionContext) {
-	c = context;
-	let devFlofData = new devFlow.DevFlow(c);
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateLaunchJson', () => devFlofData.makeLaunchFile()));
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.generateTaskJson', () => devFlofData.makeTasksFile()));
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.setONEAPIenvironment', () => devFlofData.checkAndGetEnvironment()));
-	context.subscriptions.push(vscode.commands.registerCommand('intel.oneAPIСonfigurator.clearEnvironment', () => devFlofData.clearEnvironment()));
-
-	vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
-		devFlofData.checkNewTerminals(terminal);
-	});
+export function activate(context: vscode.ExtensionContext): void {
+	const devFlof = new DevFlow(context);
+	context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.initializeEnvironment', () => devFlof.environment.initializeEnvironment()));
+	context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.clearEnvironment', () => devFlof.environment.clearEnvironment()));
+	context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.switchEnv', () => devFlof.environment.switchEnv()));
 }
 
-export function deactivate() {
-	console.log("Environment and Launch Configurator for Intel oneAPI Toolkits (preview): Goodbye");
+export function deactivate(): void {
+	console.log("Environment Configurator for Intel oneAPI Toolkits: Goodbye");
 }
