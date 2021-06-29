@@ -16,6 +16,8 @@ import { Storage } from './utils/storage_utils';
 export abstract class OneApiEnv {
     protected collection: vscode.EnvironmentVariableCollection;
     protected initialEnv: Map<string, string | undefined>;
+    protected activeEnv: string;
+    protected statusBarItem: vscode.StatusBarItem;
 
     private _setvarsConfigsPaths: string[] | undefined;
     private _oneAPIRootPath: string | undefined;
@@ -41,12 +43,18 @@ export abstract class OneApiEnv {
 
     constructor(context: vscode.ExtensionContext) {
         this.initialEnv = new Map();
+        this.activeEnv = "Undefined";
         this.collection = context.environmentVariableCollection;
-
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.setupVscodeEnv();
+        this.setEnvNameToStatusBar(undefined);
         context.subscriptions.push(vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
             if (context.environmentVariableCollection.get('SETVARS_COMPLETED')) {
-                vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `Intel oneAPI: ${terminal.name}` });
+                let extraTerminalName = 'Intel';
+                if (this.activeEnv !== "Undefined") {
+                    extraTerminalName = this.activeEnv;
+                }
+                vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `${extraTerminalName} oneAPI: ${terminal.name}` });
             }
         }));
     }
@@ -213,8 +221,11 @@ export abstract class OneApiEnv {
         if (!isDefault) {
             const setvarsConfigPath = await this.getSetvarsConfigPath();
             if (setvarsConfigPath) {
+                this.activeEnv = parse(setvarsConfigPath).base;
                 vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
                 args = `--config="${setvarsConfigPath}"`;
+            } else {
+                this.activeEnv = "Default";
             }
         }
         const cmd = process.platform === 'win32' ?
@@ -232,6 +243,7 @@ export abstract class OneApiEnv {
             });
             await this.execSetvarsCatch(token, cmd);
         });
+
         await terminal_utils.checkExistingTerminals();
         return true;
     }
@@ -302,72 +314,30 @@ export abstract class OneApiEnv {
         });
         return;
     }
+
+    protected setEnvNameToStatusBar(envName: string | undefined): void {
+        if (envName) {
+            this.statusBarItem.text = "Active environment: ".concat(envName);
+        }
+        else {
+            this.statusBarItem.text = "Active environment: ".concat("not selected");
+        }
+        this.statusBarItem.show();
+    }
 }
 
-export class SingleRootEnv extends OneApiEnv {
-    constructor(context: vscode.ExtensionContext) {
-        super(context);
-    }
 
-    async initializeDefaultEnvironment(): Promise<void> {
-        this.initializeEnvironment(true);
-    }
-
-    async initializeCustomEnvironment(): Promise<void> {
-        this.initializeEnvironment(false);
-    }
-
-    private async initializeEnvironment(isDefault: boolean): Promise<void> {
-        if (this.collection.get('SETVARS_COMPLETED')) {
-            vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Clear environment variables' or choose a different working directory for initialization", { modal: true });
-            return;
-        }
-        if (this.initialEnv.get("SETVARS_COMPLETED")) {
-            await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
-            return;
-        }
-        await this.getEnvironment(isDefault);
-    }
-
-    async clearEnvironment(): Promise<void> {
-        if (!this.collection.get('SETVARS_COMPLETED')) {
-            vscode.window.showWarningMessage("oneAPI environment has not been configured and cannot be removed.");
-            return;
-        }
-        await this.restoreVscodeEnv();
-        this.collection.clear();
-        vscode.window.showInformationMessage("oneAPI environment removed successfully.");
-    }
-
-    async switchEnv(): Promise<boolean> {
-        vscode.window.showErrorMessage('"Switch environment" command is only available if your workspace is multiroot', { modal: true });
-        return true;
-    }
-}
 
 export class MultiRootEnv extends OneApiEnv {
     private storage: Storage;
-    private activeDir: string | undefined;
-    private statusBarItem: vscode.StatusBarItem;
+    private envCollection: string[];
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
         this.storage = new Storage(context.workspaceState);
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
-
-        this.setActiveDir(this.storage.get("activeDir"));
-        this.statusBarItem.show();
-        this.checkActiveDirForRelevance();
-        this.updateFoldersInStorage();
-
-        context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(event => {
-            for (const folder of event.added) {
-                this.addEnv(folder.uri.toString());
-            }
-            for (const folder of event.removed) {
-                this.removeEnv(folder.uri.toString());
-            }
-        }));
+        this.envCollection = [];
+        this.setEnvNameToStatusBar(undefined);
+        this.updateEnvsInStorage();
     }
 
     async initializeDefaultEnvironment(): Promise<void> {
@@ -378,68 +348,69 @@ export class MultiRootEnv extends OneApiEnv {
         this.initializeEnvironment(false);
     }
     async initializeEnvironment(isDefault: boolean): Promise<void> {
-        if (!this.activeDir) {
-            vscode.window.showInformationMessage("Select the directory for which the environment will be set. Note that the environment applies to all tasks, launch configs, and new terminals, regardless of which folder it was originally associated with.");
-            if (await this.switchEnv() !== true) {
-                vscode.window.showErrorMessage("No active directory selected. oneAPI environment not applied.", { modal: true });
-                return;
-            }
-        }
-
-        if (this.collection.get('SETVARS_COMPLETED')) {
-            vscode.window.showWarningMessage("oneAPI environment has already been initialized. You can remove the initialized environment using 'Intel oneAPI: Clear environment variables' or choose a different working directory for initialization", { modal: true });
-            return;
-        }
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
             await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
             return;
         }
 
         if (await this.getEnvironment(isDefault)) {
-            if (this.activeDir) {
-                const activeEnv = new Map();
-                this.collection.forEach((k, m) => {
-                    activeEnv.set(k, m.value);
-                });
-                await this.storage.writeEnvToExtensionStorage(this.activeDir, activeEnv);
+            if (!this.envCollection.includes(this.activeEnv)) {
+                this.envCollection.push(this.activeEnv);
             }
+            else {
+                vscode.window.showInformationMessage(`Environment ${this.activeEnv} was redefined`);
+            }
+            const activeEnvCollection = new Map();
+            this.collection.forEach((k, m) => {
+                activeEnvCollection.set(k, m.value);
+            });
+            await this.storage.writeEnvToExtensionStorage(this.activeEnv, activeEnvCollection);
+
         }
     }
 
     async clearEnvironment(): Promise<void> {
-        if (this.activeDir) {
-            this.storage.writeEnvToExtensionStorage(this.activeDir, new Map());
-        }
         await this.restoreVscodeEnv();
-        this.collection.clear();
+        await this.removeEnv(this.activeEnv);
+        this.activeEnv = 'Undefined';
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
         return;
     }
 
     async switchEnv(): Promise<boolean> {
-        const folder = await getworkspaceFolder();
-        if (!folder || folder.uri.toString() === this.activeDir) {
+        const optinosItems: vscode.QuickPickItem[] = [];
+        const options: vscode.InputBoxOptions = {
+            placeHolder: `Please select which setvars_config file you want to set:`
+        };
+        this.envCollection.forEach(async function (oneEnv) {
+                optinosItems.push({
+                    label: oneEnv,
+                    description: oneEnv === "Default" ? "Initialize the default environment" : `To initialize the environment using the ${oneEnv} file`
+                });
+        });
+        optinosItems.push({
+            label: 'Skip',
+            description: 'Do not change the environment'
+        });
+        const env = await vscode.window.showQuickPick(optinosItems, options);
+        if (!env || env?.label === 'Skip') {
             return false;
         }
-        const activeDir = folder?.uri.toString();
-        this.setActiveDir(activeDir);
-        await this.storage.set("activeDir", activeDir);
-        await this.applyEnv(activeDir);
-        vscode.window.showInformationMessage(`Working directory selected: ${folder?.name}`);
+        this.setEnvNameToStatusBar(env.label);
+        await this.applyEnv(env.label);
         return true;
     }
 
-    private async addEnv(folder: string): Promise<void> {
-        await this.storage.writeEnvToExtensionStorage(folder, new Map());
+    private async addEnv(env: string | undefined): Promise<void> {
+        await this.storage.writeEnvToExtensionStorage(env, new Map());
     }
 
-    private async removeEnv(folder: string): Promise<void> {
-        if (this.activeDir === folder) {
-            this.setActiveDir(undefined);
-            await this.storage.set("activeDir", undefined);
-            this.collection.clear();
-        }
-        await this.storage.writeEnvToExtensionStorage(folder, undefined);
+    private async removeEnv(env: string): Promise<void> {
+        //this.storage.writeEnvToExtensionStorage(env, new Map());
+        await this.storage.set(env, undefined);
+        this.collection.clear();
+        await this.storage.writeEnvToExtensionStorage(env, undefined);
+        this.setEnvNameToStatusBar(undefined);
     }
 
     private async applyEnv(folder: string): Promise<boolean> {
@@ -456,50 +427,10 @@ export class MultiRootEnv extends OneApiEnv {
         return true;
     }
 
-    private setActiveDir(dir: string | undefined): void {
-        this.activeDir = dir;
-        if (dir) {
-            const activeDirUri = vscode.Uri.parse(dir);
-            const activeDirName = vscode.workspace.getWorkspaceFolder(activeDirUri)?.name;
-            if (activeDirName) {
-                this.statusBarItem.text = "Active environment: ".concat(activeDirName);
-            }
-        }
-        else {
-            this.statusBarItem.text = "Active environment: ".concat("not selected");
+    private async updateEnvsInStorage(): Promise<void> {
+        const env = await this.storage.readEnvFromExtensionStorage(this.activeEnv);
+        if (!env) {
+            await this.addEnv(this.activeEnv);
         }
     }
-
-    private checkActiveDirForRelevance(): void {
-        if (this.activeDir && !vscode.workspace.workspaceFolders?.find((el) => {
-            if (el.uri.toString() === this.activeDir) { return true; }
-        })) {
-            this.collection.clear();
-            this.storage.set("activeDir", undefined);
-            this.storage.set(this.activeDir, undefined);
-            this.setActiveDir(undefined);
-        }
-    }
-
-    private updateFoldersInStorage(): void {
-        vscode.workspace.workspaceFolders?.forEach(async folder => {
-            const env = await this.storage.readEnvFromExtensionStorage(folder.uri.toString());
-            if (!env) {
-                await this.addEnv(folder.uri.toString());
-            }
-        });
-    }
-}
-
-async function getworkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
-    if (vscode.workspace.workspaceFolders?.length === 1) {
-        return vscode.workspace.workspaceFolders[0];
-    }
-    const selection = await vscode.window.showWorkspaceFolderPick();
-    if (!selection) {
-        vscode.window.showErrorMessage("Cannot find the working directory.", { modal: true });
-        vscode.window.showInformationMessage("Please add one or more working directories and try again.");
-        return undefined; // for unit tests
-    }
-    return selection;
 }

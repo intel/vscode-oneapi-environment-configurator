@@ -7,12 +7,12 @@
 
 'use strict';
 import * as vscode from 'vscode';
-import { OneApiEnv, SingleRootEnv, MultiRootEnv } from './environment';
+import { OneApiEnv, MultiRootEnv } from './environment';
 
 export class DevFlow {
     environment: OneApiEnv;
     constructor(context: vscode.ExtensionContext) {
-        this.environment = vscode.workspace.workspaceFile !== undefined ? new MultiRootEnv(context) : new SingleRootEnv(context);
+        this.environment = new MultiRootEnv(context);
         DevFlow.register(context, this.environment);
     }
     // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
@@ -27,9 +27,6 @@ export class DevFlow {
             if (e.affectsConfiguration("intel-corporation.oneapi-environment-variables.SETVARS_CONFIG")) {
                 environment.setvarsConfigsPaths = vscode.workspace.getConfiguration().get<string[]>("intel-corporation.oneapi-environment-variables.SETVARS_CONFIG");
             }
-        }));
-
-        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration("intel-corporation.oneapi-environment-variables.ONEAPI_ROOT")) {
                 environment.oneAPIRootPath = vscode.workspace.getConfiguration().get<string>("intel-corporation.oneapi-environment-variables.ONEAPI_ROOT");
             }
