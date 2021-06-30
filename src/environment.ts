@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import * as terminal_utils from './utils/terminal_utils';
 import { execSync, exec } from 'child_process';
 import { posix, join, parse } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, access, constants } from 'fs';
 import { Storage } from './utils/storage_utils';
 
 export abstract class OneApiEnv {
@@ -124,28 +124,31 @@ export abstract class OneApiEnv {
             // 0. Check oneAPI Root Path from setting.json
             if (this._oneAPIRootPath) {
                 const pathToSetvars = join(this._oneAPIRootPath, `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
-                if (existsSync(pathToSetvars)) {
-                    return pathToSetvars;
-                } else {
-                    vscode.window.showErrorMessage('Could not find setvars script by the path specified for ONEAPI_ROOT in the settings. You can ignore this problem and continue with the setvars automatic search, or if it fails, specify the location manually. To fix this problem, go to the extension settings and specify the correct path for ONEAPI_ROOT.');
-                    const options: vscode.InputBoxOptions = {
-                        placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT`
-                    };
-                    const optinosItems: vscode.QuickPickItem[] = [];
-                    optinosItems.push({
-                        label: 'Continue',
-                        description: 'Try to find setvars automatically'
-                    });
-                    optinosItems.push({
-                        label: 'Skip setvars search',
-                        description: 'Allows to go directly to specifying the path to setvars'
-                    });
 
-                    const tmp = await vscode.window.showQuickPick(optinosItems, options);
-                    if (tmp?.label !== 'Continue') {
-                        return undefined;
+               access(pathToSetvars, constants.F_OK, async (err: unknown) => {
+                    if (!err) {
+                        return pathToSetvars;
+                    } else {
+                        vscode.window.showErrorMessage('Could not find setvars script by the path specified for ONEAPI_ROOT in the settings. You can ignore this problem and continue with the setvars automatic search, or if it fails, specify the location manually. To fix this problem, go to the extension settings and specify the correct path for ONEAPI_ROOT.');
+                        const options: vscode.InputBoxOptions = {
+                            placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT`
+                        };
+                        const optinosItems: vscode.QuickPickItem[] = [];
+                        optinosItems.push({
+                            label: 'Continue',
+                            description: 'Try to find setvars automatically'
+                        });
+                        optinosItems.push({
+                            label: 'Skip setvars search',
+                            description: 'Allows to go directly to specifying the path to setvars'
+                        });
+
+                        const tmp = await vscode.window.showQuickPick(optinosItems, options);
+                        if (tmp?.label !== 'Continue') {
+                            return undefined;
+                        }
                     }
-                }
+                });
             }
             // 1.check $PATH for setvars.sh
             const cmdParsePath = process.platform === 'win32' ?
@@ -224,9 +227,9 @@ export abstract class OneApiEnv {
                 this.activeEnv = parse(setvarsConfigPath).base;
                 vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
                 args = `--config="${setvarsConfigPath}"`;
-            } else {
-                this.activeEnv = "Default";
             }
+        } else {
+            this.activeEnv = "Default";
         }
         const cmd = process.platform === 'win32' ?
             `"${fspath}" ${args} > NULL && set` :
@@ -341,11 +344,11 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     async initializeDefaultEnvironment(): Promise<void> {
-        this.initializeEnvironment(true);
+        await this.initializeEnvironment(true);
     }
 
     async initializeCustomEnvironment(): Promise<void> {
-        this.initializeEnvironment(false);
+        await this.initializeEnvironment(false);
     }
     async initializeEnvironment(isDefault: boolean): Promise<void> {
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
@@ -378,15 +381,27 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     async switchEnv(): Promise<boolean> {
+        if (this.envCollection.length < 2) {
+            const tmp = await vscode.window.showInformationMessage(`Nothing!\nYou can specify custom environment parameters using the setvars_config file on the settings page.`, `Open settings`, `Learn more about setvars_config`);
+            if (tmp === `Open settings`) {
+                await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
+            }
+            if (tmp === `Learn more about setvars_config`) {
+                vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
+                    "https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
+                    : 'https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+            }
+            return false;
+        }
         const optinosItems: vscode.QuickPickItem[] = [];
         const options: vscode.InputBoxOptions = {
             placeHolder: `Please select which setvars_config file you want to set:`
         };
         this.envCollection.forEach(async function (oneEnv) {
-                optinosItems.push({
-                    label: oneEnv,
-                    description: oneEnv === "Default" ? "Initialize the default environment" : `To initialize the environment using the ${oneEnv} file`
-                });
+            optinosItems.push({
+                label: oneEnv,
+                description: oneEnv === "Default" ? "Initialize the default environment" : `To initialize the environment using the ${oneEnv} file`
+            });
         });
         optinosItems.push({
             label: 'Skip',
