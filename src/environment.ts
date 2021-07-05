@@ -226,7 +226,7 @@ export abstract class OneApiEnv {
             if (setvarsConfigPath) {
                 this.activeEnv = parse(setvarsConfigPath).base;
                 vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
-                args = `--config="${setvarsConfigPath}"`;
+                args = `--config=${setvarsConfigPath} --force `;
             }
         } else {
             this.activeEnv = "Default";
@@ -248,6 +248,7 @@ export abstract class OneApiEnv {
         });
 
         await terminal_utils.checkExistingTerminals();
+        this.setEnvNameToStatusBar(this.activeEnv);
         return true;
     }
 
@@ -354,6 +355,10 @@ export class MultiRootEnv extends OneApiEnv {
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
             await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
             return;
+        }
+
+        if (this.collection.get('SETVARS_COMPLETED')) {
+            this.restoreVscodeEnv();
         }
 
         if (await this.getEnvironment(isDefault)) {
