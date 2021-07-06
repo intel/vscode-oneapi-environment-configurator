@@ -125,7 +125,7 @@ export abstract class OneApiEnv {
             if (this._oneAPIRootPath) {
                 const pathToSetvars = join(this._oneAPIRootPath, `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
 
-               access(pathToSetvars, constants.F_OK, async (err: unknown) => {
+                access(pathToSetvars, constants.F_OK, async (err: unknown) => {
                     if (!err) {
                         return pathToSetvars;
                     } else {
@@ -229,7 +229,7 @@ export abstract class OneApiEnv {
                 args = `--config=${setvarsConfigPath} --force `;
             }
         } else {
-            this.activeEnv = "Default";
+            this.activeEnv = "Default oneAPI config";
         }
         const cmd = process.platform === 'win32' ?
             `"${fspath}" ${args} > NULL && set` :
@@ -387,7 +387,7 @@ export class MultiRootEnv extends OneApiEnv {
 
     async switchEnv(): Promise<boolean> {
         if (this.envCollection.length < 2) {
-            const tmp = await vscode.window.showInformationMessage(`Nothing!\nYou can specify custom environment parameters using the setvars_config file on the settings page.`, `Open settings`, `Learn more about setvars_config`);
+            const tmp = await vscode.window.showInformationMessage(`Nothing to switch! You can specify custom environment parameters using the setvars_config file on the settings page.`, `Open settings`, `Learn more about setvars_config`);
             if (tmp === `Open settings`) {
                 await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
             }
@@ -405,7 +405,7 @@ export class MultiRootEnv extends OneApiEnv {
         this.envCollection.forEach(async function (oneEnv) {
             optinosItems.push({
                 label: oneEnv,
-                description: oneEnv === "Default" ? "Initialize the default environment" : `To initialize the environment using the ${oneEnv} file`
+                description: oneEnv === "Default oneAPI config" ? "Initialize the default oneAPI environment" : `To initialize the oneAPI environment using the ${oneEnv} file`
             });
         });
         optinosItems.push({
