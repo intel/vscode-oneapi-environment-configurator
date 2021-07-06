@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import * as terminal_utils from './utils/terminal_utils';
 import { execSync, exec } from 'child_process';
 import { posix, join, parse } from 'path';
-import { existsSync, access, constants } from 'fs';
+import { existsSync } from 'fs';
 import { Storage } from './utils/storage_utils';
 
 export abstract class OneApiEnv {
@@ -43,20 +43,11 @@ export abstract class OneApiEnv {
 
     constructor(context: vscode.ExtensionContext) {
         this.initialEnv = new Map();
-        this.activeEnv = "Undefined";
+        this.activeEnv = `Undefined`;
         this.collection = context.environmentVariableCollection;
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.setupVscodeEnv();
         this.setEnvNameToStatusBar(undefined);
-        context.subscriptions.push(vscode.window.onDidOpenTerminal((terminal: vscode.Terminal) => {
-            if (context.environmentVariableCollection.get('SETVARS_COMPLETED')) {
-                let extraTerminalName = 'Intel';
-                if (this.activeEnv !== "Undefined") {
-                    extraTerminalName = this.activeEnv;
-                }
-                vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: `${extraTerminalName} oneAPI: ${terminal.name}` });
-            }
-        }));
     }
 
     abstract initializeDefaultEnvironment(): Promise<void>;
@@ -125,31 +116,30 @@ export abstract class OneApiEnv {
             if (this._oneAPIRootPath) {
                 const pathToSetvars = join(this._oneAPIRootPath, `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
 
-                access(pathToSetvars, constants.F_OK, async (err: unknown) => {
-                    if (!err) {
-                        return pathToSetvars;
-                    } else {
-                        vscode.window.showErrorMessage('Could not find setvars script by the path specified for ONEAPI_ROOT in the settings. You can ignore this problem and continue with the setvars automatic search, or if it fails, specify the location manually. To fix this problem, go to the extension settings and specify the correct path for ONEAPI_ROOT.');
-                        const options: vscode.InputBoxOptions = {
-                            placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT`
-                        };
-                        const optinosItems: vscode.QuickPickItem[] = [];
-                        optinosItems.push({
-                            label: 'Continue',
-                            description: 'Try to find setvars automatically'
-                        });
-                        optinosItems.push({
-                            label: 'Skip setvars search',
-                            description: 'Allows to go directly to specifying the path to setvars'
-                        });
+                if (existsSync(pathToSetvars)) {
+                    return pathToSetvars;
+                } else {
+                    vscode.window.showErrorMessage('Could not find setvars script by the path specified for ONEAPI_ROOT in the settings. You can ignore this problem and continue with the setvars automatic search, or if it fails, specify the location manually. To fix this problem, go to the extension settings and specify the correct path for ONEAPI_ROOT.');
+                    const options: vscode.InputBoxOptions = {
+                        placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT`
+                    };
+                    const optinosItems: vscode.QuickPickItem[] = [];
+                    optinosItems.push({
+                        label: 'Continue',
+                        description: 'Try to find setvars automatically'
+                    });
+                    optinosItems.push({
+                        label: 'Skip setvars search',
+                        description: 'Allows to go directly to specifying the path to setvars'
+                    });
 
-                        const tmp = await vscode.window.showQuickPick(optinosItems, options);
-                        if (tmp?.label !== 'Continue') {
-                            return undefined;
-                        }
+                    const tmp = await vscode.window.showQuickPick(optinosItems, options);
+                    if (tmp?.label !== 'Continue') {
+                        return undefined;
                     }
-                });
+                }
             }
+
             // 1.check $PATH for setvars.sh
             const cmdParsePath = process.platform === 'win32' ?
                 `pwsh -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
@@ -320,11 +310,11 @@ export abstract class OneApiEnv {
     }
 
     protected setEnvNameToStatusBar(envName: string | undefined): void {
-        if (envName) {
-            this.statusBarItem.text = "Active environment: ".concat(envName);
+        if (!envName || envName === `Undefined`) {
+            this.statusBarItem.text = "Active environment: ".concat("not selected");
         }
         else {
-            this.statusBarItem.text = "Active environment: ".concat("not selected");
+            this.statusBarItem.text = "Active environment: ".concat(envName);
         }
         this.statusBarItem.show();
     }
@@ -340,8 +330,15 @@ export class MultiRootEnv extends OneApiEnv {
         super(context);
         this.storage = new Storage(context.workspaceState);
         this.envCollection = [];
-        this.setEnvNameToStatusBar(undefined);
-        this.updateEnvsInStorage();
+        this.activeEnv = `Undefined`;
+        this.setEnvNameToStatusBar(this.activeEnv);
+        this.updateEnvsInStorage(this.activeEnv);
+        this.envCollection.push(this.activeEnv);
+        const activeEnvCollection = new Map();
+        this.collection.forEach((k, m) => {
+            activeEnvCollection.set(k, m.value);
+        });
+        this.storage.writeEnvToExtensionStorage(this.activeEnv, activeEnvCollection);
     }
 
     async initializeDefaultEnvironment(): Promise<void> {
@@ -378,9 +375,13 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     async clearEnvironment(): Promise<void> {
+        if(this.activeEnv === `Undefined`)
+        {
+            vscode.window.showInformationMessage("Undefined environment has not been configured and cannot be cleared.");
+            return;
+        }
         await this.restoreVscodeEnv();
         await this.removeEnv(this.activeEnv);
-        this.activeEnv = 'Undefined';
         vscode.window.showInformationMessage("oneAPI environment removed successfully.");
         return;
     }
@@ -405,7 +406,7 @@ export class MultiRootEnv extends OneApiEnv {
         this.envCollection.forEach(async function (oneEnv) {
             optinosItems.push({
                 label: oneEnv,
-                description: oneEnv === "Default oneAPI config" ? "Initialize the default oneAPI environment" : `To initialize the oneAPI environment using the ${oneEnv} file`
+                description: oneEnv === "Default oneAPI config" ? "To initialize the default oneAPI environment" : oneEnv === `Undefined` ? "To initialize the oneAPI environment without oneAPI" : 'To initialize the oneAPI environment using the ${oneEnv} file'
             });
         });
         optinosItems.push({
@@ -417,6 +418,7 @@ export class MultiRootEnv extends OneApiEnv {
             return false;
         }
         this.setEnvNameToStatusBar(env.label);
+        this.activeEnv = env.label;
         await this.applyEnv(env.label);
         return true;
     }
@@ -426,17 +428,21 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     private async removeEnv(env: string): Promise<void> {
-        //this.storage.writeEnvToExtensionStorage(env, new Map());
         await this.storage.set(env, undefined);
         this.collection.clear();
+        const nameToDel = this.activeEnv;
+        this.envCollection = this.envCollection.filter(function (item) {
+            return item !== nameToDel;
+        });
         await this.storage.writeEnvToExtensionStorage(env, undefined);
+        this.activeEnv = 'Undefined';
         this.setEnvNameToStatusBar(undefined);
     }
 
-    private async applyEnv(folder: string): Promise<boolean> {
+    private async applyEnv(envName: string): Promise<boolean> {
         this.restoreVscodeEnv();
         this.collection.clear();
-        const env = await this.storage.readEnvFromExtensionStorage(folder);
+        const env = await this.storage.readEnvFromExtensionStorage(envName);
         if (!env || env.size === 0) {
             return false;
         }
@@ -447,8 +453,8 @@ export class MultiRootEnv extends OneApiEnv {
         return true;
     }
 
-    private async updateEnvsInStorage(): Promise<void> {
-        const env = await this.storage.readEnvFromExtensionStorage(this.activeEnv);
+    private async updateEnvsInStorage(envName: string): Promise<void> {
+        const env = await this.storage.readEnvFromExtensionStorage(envName);
         if (!env) {
             await this.addEnv(this.activeEnv);
         }
