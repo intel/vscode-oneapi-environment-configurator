@@ -41,7 +41,7 @@
 		"commands": [
 			{
 				"command": "intel-corporation.oneapi-environment-variables.initializeEnvironment",
-				"title": "Intel oneAPI: Initialize environment variables"
+				"title": "Intel oneAPI: Initialize default environment variables"
 			},
 			{
 				"command": "intel-corporation.oneapi-environment-variables.initializeEnvironmentConfig",
