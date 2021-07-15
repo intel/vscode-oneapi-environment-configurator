@@ -19,7 +19,7 @@ export class DevFlow {
     public static register(context: vscode.ExtensionContext, environment: OneApiEnv) {
 
         // Initializing parameters from Setting.json at VSCode startup
-        environment.oneAPIRootPath  = vscode.workspace.getConfiguration("intel-corporation.oneapi-environment-variables").get<string>('ONEAPI_ROOT');
+        environment.oneAPIRootPath = vscode.workspace.getConfiguration("intel-corporation.oneapi-environment-variables").get<string>('ONEAPI_ROOT');
         environment.setvarsConfigsPaths = vscode.workspace.getConfiguration("intel-corporation.oneapi-environment-variables").get<string[]>('SETVARS_CONFIG');
 
         // Updating parameters when they are changed in Setting.json
@@ -38,5 +38,4 @@ export class DevFlow {
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.clearEnvironment', () => environment.clearEnvironment()));
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-variables.switchEnv', () => environment.switchEnv()));
     }
-
 }

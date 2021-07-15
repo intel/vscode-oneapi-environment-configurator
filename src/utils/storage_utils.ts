@@ -21,10 +21,10 @@ export class Storage {
     }
 
     async writeEnvToExtensionStorage(k: string | undefined, v: Map<string, string> | undefined): Promise<void> {
-        if (k=== undefined){
+        if (k === undefined) {
             return undefined;
         }
-        if (v=== undefined) {
+        if (v === undefined) {
             await this.storage.update(k, v);
             return;
         }
@@ -34,7 +34,7 @@ export class Storage {
     }
 
     async readEnvFromExtensionStorage(k: string | undefined): Promise<Map<string, string> | undefined> {
-        if (k=== undefined){
+        if (k === undefined) {
             return undefined;
         }
         const jsonString: string | undefined = await this.storage.get(k);
