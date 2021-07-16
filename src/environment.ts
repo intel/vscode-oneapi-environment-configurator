@@ -108,6 +108,15 @@ export abstract class OneApiEnv {
                 return tmp?.description;
             }
         }
+        const tmp = await vscode.window.showInformationMessage(`No setvars_config files are specified in the settings! Please go to settings and specify at least one configuration file for initializing the custom oneAPI environment.`, `Open settings`, `Learn more about setvars_config`);
+            if (tmp === `Open settings`) {
+                await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
+            }
+            if (tmp === `Learn more about setvars_config`) {
+                vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
+                    "https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
+                    : 'https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+            }
         return undefined;
     }
 
@@ -331,9 +340,6 @@ export class MultiRootEnv extends OneApiEnv {
         super(context);
         this.storage = new Storage(context.workspaceState);
         this.envCollection = [];
-        this.activeEnv = `Undefined`;
-        this.setEnvNameToStatusBar(this.activeEnv);
-        this.updateEnvsInStorage(this.activeEnv);
         this.envCollection.push(this.activeEnv);
         const activeEnvCollection = new Map();
         this.collection.forEach((k, m) => {
