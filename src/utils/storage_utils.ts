@@ -20,7 +20,10 @@ export class Storage {
         await this.storage.update(key, value);
     }
 
-    async writeEnvToExtensionStorage(k: string, v: Map<string, string> | undefined): Promise<void> {
+    async writeEnvToExtensionStorage(k: string | undefined, v: Map<string, string> | undefined): Promise<void> {
+        if (k === undefined) {
+            return undefined;
+        }
         if (v === undefined) {
             await this.storage.update(k, v);
             return;
@@ -30,7 +33,10 @@ export class Storage {
         await this.storage.update(k, jsonString);
     }
 
-    async readEnvFromExtensionStorage(k: string): Promise<Map<string, string> | undefined> {
+    async readEnvFromExtensionStorage(k: string | undefined): Promise<Map<string, string> | undefined> {
+        if (k === undefined) {
+            return undefined;
+        }
         const jsonString: string | undefined = await this.storage.get(k);
         if (!jsonString) {
             return undefined;
