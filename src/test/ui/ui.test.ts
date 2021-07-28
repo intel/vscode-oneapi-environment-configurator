@@ -58,7 +58,7 @@ describe('DevFlow extension UI Tests', function () {
         });
     });
 
-    describe('With single-root workspace', function () {
+    describe('With workspace', function () {
         before(async () => {
             const workbench = new Workbench();
             await workbench.executeCommand('File: Open Folder');
@@ -104,47 +104,11 @@ describe('DevFlow extension UI Tests', function () {
                 await workbench.executeCommand('Intel oneAPI: Clear environment variables');
                 await workbench.executeCommand('Intel oneAPI: Initialize custom environment variables');
                 await driver.sleep(1000);
-                // close the dialog after setting the environment
-                const dialog = new ModalDialog();
-                await dialog.pushButton('OK');
 
-                const notification = await driver.wait(async () => { return await getNotifications('The config file found'); }, 10000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('No setvars_config files are specified'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
-
-        describe('Intel oneAPI: Clear environment variables', function () {
-            it('Quick pick contain command', async function () {
-                const workbench = new Workbench();
-                const input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Clear environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Clear environment variables');
-                expect(pick).not.undefined;
-            });
-
-            it('Command shows a notification with the correct text', async function () {
-                const workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Clear environment variables');
-                await driver.sleep(1000);
-                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 10000) as Notification;
-                expect(await notification.getMessage()).equals('oneAPI environment removed successfully.');
-                expect(await notification.getType()).equals(NotificationType.Info);
-            });
-        });
-    });
-
-    describe('With multi-root workspace', function () {
-        const emptyFolderPath = join(process.cwd(), 'test-resources', 'tmp');
-        before(async () => {
-            const workbench = new Workbench();
-            mkdirSync(emptyFolderPath, { recursive: true });
-            await workbench.executeCommand('Workspaces: Add Folder to Workspace');
-            const dialog = await DialogHandler.getOpenDialog();
-            await dialog.selectPath(emptyFolderPath);
-            await dialog.confirm();
-            createSetvarsConfig(emptyFolderPath);
-        });
-
         describe('Intel oneAPI: Switch environment', function () {
             it('Quick pick contain command', async function () {
                 const workbench = new Workbench();
@@ -160,30 +124,7 @@ describe('DevFlow extension UI Tests', function () {
                 await input.setText('>Intel oneAPI: Switch environment');
                 await input.selectQuickPick('Intel oneAPI: Switch environment');
                 await driver.sleep(1000);
-                await input.selectQuickPick('tmp');
-                const notification = await driver.wait(async () => { return await getNotifications('Working directory selected: tmp'); }, 10000) as Notification;
-                expect(await notification.getType()).equals(NotificationType.Info);
-            });
-        });
-
-        describe('Default Initialize', function () {
-            it('Quick pick contain command', async function () {
-                const workbench = new Workbench();
-                const input = await workbench.openCommandPrompt() as InputBox;
-                await input.setText('>Intel oneAPI: Initialize default environment variables');
-                const pick = await input.findQuickPick('Intel oneAPI: Initialize default environment variables');
-                expect(pick).not.undefined;
-            });
-
-            it('Command shows a notification with the correct text', async function () {
-                const workbench = new Workbench();
-                await workbench.executeCommand('Intel oneAPI: Initialize default environment variables');
-                await driver.sleep(1000);
-                // close the dialog after setting the environment
-                const dialog = new ModalDialog();
-                await dialog.pushButton('OK');
-
-                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment script'); }, 10000) as Notification;
+                const notification = await driver.wait(async () => { return await getNotifications('Nothing to switch!'); }, 10000) as Notification;
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });
@@ -201,14 +142,10 @@ describe('DevFlow extension UI Tests', function () {
                 const workbench = new Workbench();
                 await workbench.executeCommand('Intel oneAPI: Clear environment variables');
                 await driver.sleep(1000);
-                const notification = await driver.wait(async () => { return await getNotifications('oneAPI environment removed successfully.'); }, 10000) as Notification;
-                expect(await notification.getMessage()).equals('oneAPI environment removed successfully.');
+                const notification = await driver.wait(async () => { return await getNotifications('Undefined environment'); }, 10000) as Notification;
+                expect(await notification.getMessage()).equals('Undefined environment has not been configured and cannot be cleared.');
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
-        });
-
-        after(async () => {
-            rmdirSync(emptyFolderPath, { recursive: true });
         });
     });
 
