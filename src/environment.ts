@@ -109,14 +109,14 @@ export abstract class OneApiEnv {
             }
         }
         const tmp = await vscode.window.showInformationMessage(`No setvars_config files are specified in the settings! Please go to settings and specify at least one configuration file for initializing the custom oneAPI environment.`, `Open settings`, `Learn more about setvars_config`);
-            if (tmp === `Open settings`) {
-                await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
-            }
-            if (tmp === `Learn more about setvars_config`) {
-                vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
-                    "https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
-                    : 'https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
-            }
+        if (tmp === `Open settings`) {
+            await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
+        }
+        if (tmp === `Learn more about setvars_config`) {
+            vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
+                "https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
+                : 'https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+        }
         return undefined;
     }
 
@@ -330,6 +330,14 @@ export abstract class OneApiEnv {
         }
         this.statusBarItem.show();
     }
+
+    protected checkPlatform(): boolean {
+        if ((process.platform !== 'win32') && (process.platform !== 'linux')) {
+            vscode.window.showErrorMessage("Failed to activate 'Environment Configurator for Intel oneAPI Toolkits' extension. The extension is only supported on Linux and Windows", { modal: true });
+            return false;
+        }
+        return true;
+    }
 }
 
 export class MultiRootEnv extends OneApiEnv {
@@ -349,10 +357,16 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     async initializeDefaultEnvironment(): Promise<void> {
+        if (!this.checkPlatform()) {
+            return;
+        }
         await this.initializeEnvironment(true);
     }
 
     async initializeCustomEnvironment(): Promise<void> {
+        if (!this.checkPlatform()) {
+            return;
+        }
         await this.initializeEnvironment(false);
     }
     async initializeEnvironment(isDefault: boolean): Promise<void> {
@@ -382,6 +396,9 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     async clearEnvironment(): Promise<void> {
+        if (!this.checkPlatform()) {
+            return;
+        }
         if (this.activeEnv === `Undefined`) {
             vscode.window.showInformationMessage("Undefined environment has not been configured and cannot be cleared.");
             return;
@@ -393,6 +410,9 @@ export class MultiRootEnv extends OneApiEnv {
     }
 
     async switchEnv(): Promise<boolean> {
+        if (!this.checkPlatform()) {
+            return false;
+        }
         if (this.envCollection.length < 2) {
             const tmp = await vscode.window.showInformationMessage(`Nothing to switch! You can specify custom environment parameters using the setvars_config file on the settings page.`, `Open settings`, `Learn more about setvars_config`);
             if (tmp === `Open settings`) {
