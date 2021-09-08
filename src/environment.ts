@@ -117,7 +117,7 @@ export abstract class OneApiEnv {
         }
         const tmp = await vscode.window.showInformationMessage(`No setvars_config files are specified in the settings! Please go to settings and specify at least one configuration file for initializing the custom oneAPI environment.`, `Open settings`, `Learn more about setvars_config`);
         if (tmp === `Open settings`) {
-            await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
+            await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-configurator`);
         }
         if (tmp === `Learn more about setvars_config`) {
             vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
@@ -423,7 +423,7 @@ export class MultiRootEnv extends OneApiEnv {
         if (this.envCollection.length < 2) {
             const tmp = await vscode.window.showInformationMessage(`Nothing to switch! You can specify custom environment parameters using the setvars_config file on the settings page.`, `Open settings`, `Learn more about setvars_config`);
             if (tmp === `Open settings`) {
-                await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-variables`);
+                await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-configurator`);
             }
             if (tmp === `Learn more about setvars_config`) {
                 vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
