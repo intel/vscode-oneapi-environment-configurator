@@ -58,11 +58,12 @@ export abstract class OneApiEnv {
     protected async getEnvironment(isDefault: boolean): Promise<boolean | undefined> {
         const setvarsPath = await this.findSetvarsPath();
         if (!setvarsPath) {
-            vscode.window.showInformationMessage(`Could not find path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} or the path was not selected. Provide it yourself.`);
+            const fileExtension = process.platform === 'win32' ? 'bat' : 'sh';
+            vscode.window.showInformationMessage(`Could not find path to setvars.${fileExtension} or the path was not selected. Provide it yourself.`);
             const options: vscode.OpenDialogOptions = {
                 canSelectMany: false,
                 filters: {
-                    'oneAPI setvars file': [process.platform === 'win32' ? 'bat' : 'sh'],
+                    'oneAPI setvars file': [fileExtension],
                 }
             };
 
@@ -70,7 +71,7 @@ export abstract class OneApiEnv {
             if (setVarsFileUri && setVarsFileUri[0]) {
                 return await this.runSetvars(setVarsFileUri[0].fsPath, isDefault);
             } else {
-                vscode.window.showErrorMessage(`Path to setvars.${process.platform === 'win32' ? 'bat' : 'sh'} invalid, The oneAPI environment was not be applied.\n Please check setvars.${process.platform === 'win32' ? 'bat' : 'sh'} and try again.`, { modal: true });
+                vscode.window.showErrorMessage(`Path to setvars.${fileExtension} invalid, the oneAPI environment is not applied.\n Please check correctness for path to setvars.${fileExtension}.`, { modal: true });
                 return false;
             }
         } else {
