@@ -13,6 +13,12 @@ import { posix, join, parse } from 'path';
 import { existsSync } from 'fs';
 import { Storage } from './utils/storage_utils';
 
+enum Labels {
+    Undefined = 'Default environment without oneAPI',
+    DefaultOneAPI = 'Default oneAPI config',
+    Skip = 'Skip'
+}
+
 export abstract class OneApiEnv {
     protected collection: vscode.EnvironmentVariableCollection;
     protected initialEnv: Map<string, string | undefined>;
@@ -43,7 +49,7 @@ export abstract class OneApiEnv {
 
     constructor(context: vscode.ExtensionContext) {
         this.initialEnv = new Map();
-        this.activeEnv = `Undefined`;
+        this.activeEnv = Labels.Undefined;
         this.collection = context.environmentVariableCollection;
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.setupVscodeEnv();
@@ -93,11 +99,11 @@ export abstract class OneApiEnv {
                 });
             });
             optinosItems.push({
-                label: 'Skip',
+                label: Labels.Skip,
                 description: 'Do not apply the configuration file'
             });
             const tmp = await vscode.window.showQuickPick(optinosItems, options);
-            if (!tmp || tmp?.label === 'Skip') {
+            if (!tmp || tmp?.label === Labels.Skip) {
                 return undefined;
             }
             if (tmp?.description) {
@@ -231,7 +237,7 @@ export abstract class OneApiEnv {
                 return false;
             }
         } else {
-            this.activeEnv = "Default oneAPI config";
+            this.activeEnv = Labels.DefaultOneAPI;
         }
         const cmd = process.platform === 'win32' ?
             `"${fspath}" ${args} > NULL && set` :
@@ -322,7 +328,7 @@ export abstract class OneApiEnv {
     }
 
     protected setEnvNameToStatusBar(envName: string | undefined): void {
-        if (!envName || envName === `Undefined`) {
+        if (!envName || envName === Labels.Undefined) {
             this.statusBarItem.text = "Active environment: ".concat("not selected");
         }
         else {
@@ -399,7 +405,7 @@ export class MultiRootEnv extends OneApiEnv {
         if (!this.checkPlatform()) {
             return;
         }
-        if (this.activeEnv === `Undefined`) {
+        if (this.activeEnv === Labels.Undefined) {
             vscode.window.showInformationMessage("Undefined environment has not been configured and cannot be cleared.");
             return;
         }
@@ -432,15 +438,15 @@ export class MultiRootEnv extends OneApiEnv {
         this.envCollection.forEach(async function (oneEnv) {
             optinosItems.push({
                 label: oneEnv,
-                description: oneEnv === "Default oneAPI config" ? "To initialize the default oneAPI environment" : oneEnv === `Undefined` ? "To initialize the environment without oneAPI" : `To initialize the oneAPI environment using the ${oneEnv} file`
+                description: oneEnv === Labels.DefaultOneAPI ? "To initialize the default oneAPI environment" : oneEnv === Labels.Undefined ? "To initialize the environment without oneAPI" : `To initialize the oneAPI environment using the ${oneEnv} file`
             });
         });
         optinosItems.push({
-            label: 'Skip',
+            label: Labels.Skip,
             description: 'Do not change the environment'
         });
         const env = await vscode.window.showQuickPick(optinosItems, options);
-        if (!env || env?.label === 'Skip') {
+        if (!env || env?.label === Labels.Skip) {
             return false;
         }
         this.setEnvNameToStatusBar(env.label);
@@ -461,7 +467,7 @@ export class MultiRootEnv extends OneApiEnv {
             return item !== nameToDel;
         });
         await this.storage.writeEnvToExtensionStorage(env, undefined);
-        this.activeEnv = 'Undefined';
+        this.activeEnv = Labels.Undefined;
         this.setEnvNameToStatusBar(undefined);
     }
 
