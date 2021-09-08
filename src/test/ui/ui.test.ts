@@ -143,7 +143,7 @@ describe('DevFlow extension UI Tests', function () {
                 await workbench.executeCommand('Intel oneAPI: Clear environment variables');
                 await driver.sleep(1000);
                 const notification = await driver.wait(async () => { return await getNotifications('Undefined environment'); }, 10000) as Notification;
-                expect(await notification.getMessage()).equals('Undefined environment has not been configured and cannot be cleared.');
+                expect(await notification.getMessage()).equals('Environment variables have not been configured previously and cannot be cleared.');
                 expect(await notification.getType()).equals(NotificationType.Info);
             });
         });

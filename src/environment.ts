@@ -400,7 +400,7 @@ export class MultiRootEnv extends OneApiEnv {
             return;
         }
         if (this.activeEnv === `Undefined`) {
-            vscode.window.showInformationMessage("Undefined environment has not been configured and cannot be cleared.");
+            vscode.window.showInformationMessage("Environment variables have not been configured previously and cannot be cleared.");
             return;
         }
         await this.restoreVscodeEnv();
