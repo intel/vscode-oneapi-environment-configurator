@@ -10,8 +10,9 @@ This extension configures the system environment and settings for Intel(R) oneAP
 2.	Type **Intel oneAPI** to view options of the installed extensions.
 3.	Click on `Intel oneAPI: Initialize default environment variables`.
 4.	If Visual Studio Code* asks for a location, locate your setvars script:
-    Linux: the script is located in ``<install dir>/intel/oneapi``. The default installation location is ``/opt/intel/oneapi``.
+    Linux: the script is located in ``<install dir>/intel/oneapi``. The default installation location is ``/opt/intel/oneapi``
     Windows: the script is located in ``<install dir>\Intel\oneAPI\``. The default installation location is ``C:\Program Files (x86)\Intel\oneAPI``
+    MacOS: the script is located in ``<install dir>/intel/oneapi``. The default installation location is ``/opt/intel/oneapi``.
 
 * The current environment applies to all tasks, launch and new terminals, regardless of which folder it was originally associated with.
 * Previously created terminals always contain only the environment in which they were created, regardless of the current.
