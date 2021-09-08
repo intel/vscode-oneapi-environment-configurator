@@ -19,7 +19,7 @@
 	"contributes": {
 		"configuration": [
 			{
-				"title": "Environment Configurator for Intel oneAPI Toolkits",
+				"title": "Environment Configurator for Intel(R) oneAPI Toolkits",
 				"properties": {
 					"intel-corporation.oneapi-environment-variables.ONEAPI_ROOT": {
 						"type": "string",
