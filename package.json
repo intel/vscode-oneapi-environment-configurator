@@ -85,6 +85,6 @@
 	"dependencies": {},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/intel/vscode-oneapi-environment-configurator"
+		"url": "https://github.com/intel/vscode-oneapi-environment-configurator.git"
 	}
 }
