@@ -159,7 +159,7 @@ export abstract class OneApiEnv {
 
             // 1.check $PATH for setvars.sh
             const cmdParsePath = process.platform === 'win32' ?
-                `pwsh -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
+                `powershell -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
                 "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
             const paths = execSync(cmdParsePath).toString().split('\n');
             paths.pop();
