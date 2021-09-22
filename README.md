@@ -1,6 +1,6 @@
 # Environment Configurator for Intel(R) oneAPI Toolkits
 
-#### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://software.intel.com/content/www/us/en/develop/documentation/using-vs-code-with-intel-oneapi/using-the-environment-and-launch-configurator-extension.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
+#### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://software.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/run-a-sample-project-with-vscode.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
 This extension configures the system environment and settings for Intel(R) oneAPI toolkits and their products.
 ***
@@ -11,8 +11,7 @@ This extension configures the system environment and settings for Intel(R) oneAP
 3.	Click on `Intel oneAPI: Initialize default environment variables`.
 4.	If Visual Studio Code* asks for a location, locate your setvars script:
     Linux: the script is located in ``<install dir>/intel/oneapi``. The default installation location is ``/opt/intel/oneapi``
-    Windows: the script is located in ``<install dir>\Intel\oneAPI\``. The default installation location is ``C:\Program Files (x86)\Intel\oneAPI``
-    MacOS: the script is located in ``<install dir>/intel/oneapi``. The default installation location is ``/opt/intel/oneapi``.
+    Windows: the script is located in ``<install dir>\Intel\oneAPI\``. The default installation location is ``C:\Program Files (x86)\Intel\oneAPI``.
 
 * The current environment applies to all tasks, launch and new terminals, regardless of which folder it was originally associated with.
 * Previously created terminals always contain only the environment in which they were created, regardless of the current.
