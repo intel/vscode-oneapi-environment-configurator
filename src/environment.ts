@@ -12,6 +12,7 @@ import { execSync, exec } from 'child_process';
 import { posix, join, parse } from 'path';
 import { existsSync } from 'fs';
 import { Storage } from './utils/storage_utils';
+import { getPSexecutableName } from './utils/terminal_utils';
 
 enum Labels {
     Undefined = 'Default environment without oneAPI',
@@ -24,6 +25,7 @@ export abstract class OneApiEnv {
     protected initialEnv: Map<string, string | undefined>;
     protected activeEnv: string;
     protected statusBarItem: vscode.StatusBarItem;
+    protected powerShellExecName: string | undefined;
 
     private _setvarsConfigsPaths: string[] | undefined;
     private _oneAPIRootPath: string | undefined;
@@ -52,6 +54,7 @@ export abstract class OneApiEnv {
         this.activeEnv = Labels.Undefined;
         this.collection = context.environmentVariableCollection;
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
+        this.powerShellExecName = getPSexecutableName();
         this.setupVscodeEnv();
         this.setEnvNameToStatusBar(undefined);
     }
@@ -159,7 +162,7 @@ export abstract class OneApiEnv {
 
             // 1.check $PATH for setvars.sh
             const cmdParsePath = process.platform === 'win32' ?
-                `powershell -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
+                `${this.powerShellExecName} -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
                 "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
             const paths = execSync(cmdParsePath).toString().split('\n');
             paths.pop();
@@ -377,6 +380,10 @@ export class MultiRootEnv extends OneApiEnv {
         await this.initializeEnvironment(false);
     }
     async initializeEnvironment(isDefault: boolean): Promise<void> {
+        if (!this.powerShellExecName) {
+            vscode.window.showErrorMessage('Failed to determine powershell version. The environment will not be set.', { modal: true });
+            return;
+        }
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
             await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
             return;
