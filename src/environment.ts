@@ -380,7 +380,7 @@ export class MultiRootEnv extends OneApiEnv {
         await this.initializeEnvironment(false);
     }
     async initializeEnvironment(isDefault: boolean): Promise<void> {
-        if (!this.powerShellExecName) {
+        if (process.platform === 'win32' && !this.powerShellExecName) {
             vscode.window.showErrorMessage('Failed to determine powershell version. The environment will not be set.', { modal: true });
             return;
         }
