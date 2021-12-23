@@ -1,15 +1,9 @@
 name: auto upd version
 on:
-  push:
-    branches:
-      - main
-      - 2022.1_new_features
-    paths:
-      - '**.ts'
   pull_request:
     branches:
       - main
-      - 2022.1_new_features
+      - 2022.2_new_features
     paths:
       - '**.ts'
   workflow_dispatch:
@@ -26,12 +20,5 @@ jobs:
           npm --no-git-tag-version version patch
           git config user.name ci
           git config user.email cd4iss@intel.com
-          git commit -a -m "auto upd version"
+          git commit -a -m "upd version"
           git push
-      - name: Build the package
-        run: yarn install  && yarn package
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: environment-extension
-          path: ./*.vsix
