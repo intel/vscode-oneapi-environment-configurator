@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Update version of extension
         run: |
+          git checkout "$GITHUB_HEAD_REF"
           npm --no-git-tag-version version patch
           git config user.name ci
           git config user.email cd4iss@intel.com
