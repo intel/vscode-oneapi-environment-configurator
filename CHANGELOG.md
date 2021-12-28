@@ -1,5 +1,11 @@
 # Change Log
 
+##  0.2.3
+
+- Added check for avoiding conflicts with deprecated versions of extensions.
+- Implemented start.bat without administrator privileges.
+- Fixed bugs.
+
 ##  0.1.2
 
 - Added ONEAPI_ROOT and SETVARS_CONFIG settings.

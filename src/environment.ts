@@ -7,18 +7,23 @@
 
 'use strict';
 import * as vscode from 'vscode';
-import * as terminal_utils from './utils/terminal_utils';
-import { execSync, exec } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { posix, join, parse } from 'path';
 import { existsSync } from 'fs';
 import { Storage } from './utils/storage_utils';
 import { getPSexecutableName } from './utils/terminal_utils';
 
 enum Labels {
-    Undefined = 'Default environment without oneAPI',
-    DefaultOneAPI = 'Default oneAPI config',
-    Skip = 'Skip'
+    undefined = 'Default environment without oneAPI',
+    defaultOneAPI = 'Default oneAPI config',
+    skip = 'Skip'
 }
+
+type CmdForRunSetvars = {
+    interpreter: string,
+    arguments: string[]
+};
+
 
 export abstract class OneApiEnv {
     protected collection: vscode.EnvironmentVariableCollection;
@@ -51,7 +56,7 @@ export abstract class OneApiEnv {
 
     constructor(context: vscode.ExtensionContext) {
         this.initialEnv = new Map();
-        this.activeEnv = Labels.Undefined;
+        this.activeEnv = Labels.undefined;
         this.collection = context.environmentVariableCollection;
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.powerShellExecName = getPSexecutableName();
@@ -103,11 +108,11 @@ export abstract class OneApiEnv {
                 });
             });
             optinosItems.push({
-                label: Labels.Skip,
+                label: Labels.skip,
                 description: 'Do not apply the configuration file'
             });
             const tmp = await vscode.window.showQuickPick(optinosItems, options);
-            if (!tmp || tmp?.label === Labels.Skip) {
+            if (!tmp || tmp?.label === Labels.skip) {
                 return undefined;
             }
             if (tmp?.description) {
@@ -186,12 +191,13 @@ export abstract class OneApiEnv {
                 }
             }
             // 2.check in $ONEAPI_ROOT
-            if (existsSync(`${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`)) {
-                return `${process.env.ONEAPI_ROOT}/setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`;
+            const setvarsFromOneapiRoot = join(`${process.env.ONEAPI_ROOT}`, `setvars.${process.platform === 'win32' ? 'bat' : 'sh'}`);
+            if (existsSync(setvarsFromOneapiRoot)) {
+                return setvarsFromOneapiRoot;
             }
             // 3.check in global installation path
             const globalSetvarsPath = process.platform === 'win32' ?
-                `${process.env['ProgramFiles(x86)']}\\Intel\\oneAPI\\setvars.bat` :
+                join(`${process.env['ProgramFiles(x86)']}`, `Intel`, `oneAPI`, `setvars.bat`) :
                 '/opt/intel/oneapi/setvars.sh';
             if (existsSync(globalSetvarsPath)) {
                 return globalSetvarsPath;
@@ -236,16 +242,27 @@ export abstract class OneApiEnv {
             if (setvarsConfigPath) {
                 this.activeEnv = parse(setvarsConfigPath).base;
                 vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
-                args = `--config=${setvarsConfigPath} --force `;
+                args = `--config="${setvarsConfigPath}"`;
             } else {
                 return false;
             }
         } else {
-            this.activeEnv = Labels.DefaultOneAPI;
+            this.activeEnv = Labels.defaultOneAPI;
         }
-        const cmd = process.platform === 'win32' ?
-            `"${fspath}" ${args} > NULL && set` :
-            `bash -c ". ${fspath} ${args}  > /dev/null && env -0"`;
+
+        const cmd: CmdForRunSetvars =
+            process.platform === 'win32' ?
+                {
+                    interpreter: 'cmd.exe',
+                    arguments: args ?
+                        ['/c', `""${fspath}" ${args} && set"`] :
+                        ['/c', `""${fspath}" && set"`]
+                } :
+                {
+                    interpreter: 'bash',
+                    arguments: ['-c', `. "${fspath}" ${args} > /dev/null && env -0`]
+                };
+
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -256,33 +273,35 @@ export abstract class OneApiEnv {
                 this.collection.clear();
                 return false; // if user click on CANCEL
             });
+
             await this.execSetvarsCatch(token, cmd);
         });
 
-        await terminal_utils.checkExistingTerminals();
         this.setEnvNameToStatusBar(this.activeEnv);
         return true;
     }
 
-    private async execSetvarsCatch(token: vscode.CancellationToken, cmd: string): Promise<void> {
+    private async execSetvarsCatch(token: vscode.CancellationToken, cmd: CmdForRunSetvars): Promise<void> {
         return new Promise<void>(async (resolve, reject) => {
             if (token.isCancellationRequested) {
                 this.collection.clear();
                 return;
             }
-            const childProcess = exec(cmd)
+            const childProcess = spawn(cmd.interpreter, cmd.arguments, { windowsVerbatimArguments: true })
                 .on("close", (code, signal) => {
                     if (code || signal) {
                         this.collection.clear();
-                        vscode.window.showErrorMessage(`Something went wrong! \n Error: ${code ? code : signal}. oneAPI environment not applied.`, { modal: true });
+                        vscode.window.showErrorMessage(`Something went wrong!\n Error: ${code ? code : signal}. oneAPI environment not applied.`);
                     }
                     resolve();
                 })
                 .on("error", (err) => {
                     this.collection.clear();
-                    vscode.window.showErrorMessage(`Something went wrong! \n Error: ${err} oneAPI environment not applied.`, { modal: true });
+                    vscode.window.showErrorMessage(`Something went wrong!\n Error: ${err} oneAPI environment not applied.`);
                     reject(err);
                 });
+
+            childProcess.stdout.setEncoding('utf8');
             childProcess.stdout?.on("data", (d: string) => {
                 const separator = process.platform === 'win32' ? '\n' : '\u0000';
                 const vars = d.split(separator);
@@ -304,6 +323,9 @@ export abstract class OneApiEnv {
                     }
                     process.env[k] = v;
                 });
+            });
+            childProcess.stderr?.on('data', function (data: string) {
+                vscode.window.showErrorMessage(data);
             });
             token.onCancellationRequested(() => childProcess.kill());
         });
@@ -332,7 +354,7 @@ export abstract class OneApiEnv {
     }
 
     protected setEnvNameToStatusBar(envName: string | undefined): void {
-        if (!envName || envName === Labels.Undefined) {
+        if (!envName || envName === Labels.undefined) {
             this.statusBarItem.text = "Active environment: ".concat("not selected");
         }
         else {
@@ -413,7 +435,7 @@ export class MultiRootEnv extends OneApiEnv {
         if (!this.checkPlatform()) {
             return;
         }
-        if (this.activeEnv === Labels.Undefined) {
+        if (this.activeEnv === Labels.undefined) {
             vscode.window.showInformationMessage("Environment variables have not been configured previously and cannot be cleared.");
             return;
         }
@@ -446,15 +468,15 @@ export class MultiRootEnv extends OneApiEnv {
         this.envCollection.forEach(async function (oneEnv) {
             optinosItems.push({
                 label: oneEnv,
-                description: oneEnv === Labels.DefaultOneAPI ? "To initialize the default oneAPI environment" : oneEnv === Labels.Undefined ? "To initialize the environment without oneAPI" : `To initialize the oneAPI environment using the ${oneEnv} file`
+                description: oneEnv === Labels.defaultOneAPI ? "To initialize the default oneAPI environment" : oneEnv === Labels.undefined ? "To initialize the environment without oneAPI" : `To initialize the oneAPI environment using the ${oneEnv} file`
             });
         });
         optinosItems.push({
-            label: Labels.Skip,
+            label: Labels.skip,
             description: 'Do not change the environment'
         });
         const env = await vscode.window.showQuickPick(optinosItems, options);
-        if (!env || env?.label === Labels.Skip) {
+        if (!env || env?.label === Labels.skip) {
             return false;
         }
         this.setEnvNameToStatusBar(env.label);
@@ -475,7 +497,7 @@ export class MultiRootEnv extends OneApiEnv {
             return item !== nameToDel;
         });
         await this.storage.writeEnvToExtensionStorage(env, undefined);
-        this.activeEnv = Labels.Undefined;
+        this.activeEnv = Labels.undefined;
         this.setEnvNameToStatusBar(undefined);
     }
 
