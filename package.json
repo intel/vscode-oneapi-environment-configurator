@@ -1,13 +1,13 @@
 {
 	"name": "oneapi-environment-configurator",
 	"displayName": "Environment Configurator for Intel(R) oneAPI Toolkits",
-	"description": "Configure environment for working with Intel(R) oneAPI Toolkit",
-	"version": "0.2.3",
+	"description": "Configure environment for working with Intel(R) oneAPI Toolkits",
+	"version": "0.2.5",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
 	"engines": {
-		"vscode": "^1.58.1"
+		"vscode": "^1.64.0"
 	},
 	"categories": [
 		"Other"
@@ -65,21 +65,20 @@
 		"test": "./node_modules/.bin/extest setup-and-run -y -o ./src/test/ui/test-configs/settings.json -m ./src/test/ui/test-configs/.mocharc.js ./out/test/ui/ui.test.js"
 	},
 	"devDependencies": {
-		"@types/chai": "^4.2.21",
-		"@types/glob": "^7.1.4",
-		"@types/mocha": "^9.0.0",
-		"@types/node": "^16.4.5",
-		"@types/vscode": "^1.58.1",
-		"@typescript-eslint/eslint-plugin": "^4.28.5",
-		"@typescript-eslint/parser": "^4.28.5",
-		"chai": "^4.3.0",
-		"eslint": "^7.31.0",
-		"glob": "^7.1.6",
-		"mocha": "^9.1.3",
-		"typescript": "^4.3.5",
-		"vsce": "^1.96.1",
-		"vscode-extension-tester": "^4.1.1",
-		"vscode-extension-tester-native": "^3.0.2",
+		"@types/chai": "^4.3.0",
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.0",
+		"@types/node": "^17.0.21",
+		"@types/vscode": "^1.64.0",
+		"@typescript-eslint/eslint-plugin": "^5.12.1",
+		"@typescript-eslint/parser": "^5.12.1",
+		"chai": "^4.3.6",
+		"eslint": "^8.10.0",
+		"glob": "^7.2.0",
+		"mocha": "^9.2.1",
+		"typescript": "^4.5.5",
+		"vsce": "^2.6.7",
+		"vscode-extension-tester": "^4.2.4",
 		"vscode-test": "^1.6.1"
 	},
 	"dependencies": {},

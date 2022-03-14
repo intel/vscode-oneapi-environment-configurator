@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Intel Corporation
  * Licensed under the MIT License. See the project root LICENSE
- * 
+ *
  * SPDX-License-Identifier: MIT
  */
 
@@ -58,6 +58,7 @@ export abstract class OneApiEnv {
         this.initialEnv = new Map();
         this.activeEnv = Labels.undefined;
         this.collection = context.environmentVariableCollection;
+        this.collection.clear();
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
         this.powerShellExecName = getPSexecutableName();
         this.setupVscodeEnv();
@@ -73,7 +74,7 @@ export abstract class OneApiEnv {
         const setvarsPath = await this.findSetvarsPath();
         if (!setvarsPath) {
             const fileExtension = process.platform === 'win32' ? 'bat' : 'sh';
-            vscode.window.showInformationMessage(`Could not find path to setvars.${fileExtension} or the path was not selected. Provide it yourself.`);
+            vscode.window.showInformationMessage(`Could not find path to setvars.${fileExtension} or the path was not selected. Open settings and search for ONEAPI_ROOT to specify the path to the installation folder, then use the command palette to Initialize environment variables.`);
             const options: vscode.OpenDialogOptions = {
                 canSelectMany: false,
                 filters: {
@@ -85,7 +86,7 @@ export abstract class OneApiEnv {
             if (setVarsFileUri && setVarsFileUri[0]) {
                 return await this.runSetvars(setVarsFileUri[0].fsPath, isDefault);
             } else {
-                vscode.window.showErrorMessage(`Path to setvars.${fileExtension} invalid, the oneAPI environment is not applied.\n Please check correctness for path to setvars.${fileExtension}.`, { modal: true });
+                vscode.window.showErrorMessage(`Path to setvars.${fileExtension} is invalid.\n Open settings and search for ONEAPI_ROOT to specify the path to the installation folder, then use the command palette to Initialize environment variables.${fileExtension}.`, { modal: true });
                 return false;
             }
         } else {
@@ -109,7 +110,7 @@ export abstract class OneApiEnv {
             });
             optinosItems.push({
                 label: Labels.skip,
-                description: 'Do not apply the configuration file'
+                description: 'Do not apply the configuration file.'
             });
             const tmp = await vscode.window.showQuickPick(optinosItems, options);
             if (!tmp || tmp?.label === Labels.skip) {
@@ -117,20 +118,20 @@ export abstract class OneApiEnv {
             }
             if (tmp?.description) {
                 if (!existsSync(tmp?.description)) {
-                    vscode.window.showErrorMessage(`Could not find the ${tmp?.label} file on the path ${tmp?.description} .  To fix this problem, go to the extension settings and specify the correct path for SETVARS_CONFIG`);
+                    vscode.window.showErrorMessage(`Could not find the ${tmp?.label} file on the path ${tmp?.description} .  Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.`);
                     return undefined;
                 }
                 return tmp?.description;
             }
         }
-        const tmp = await vscode.window.showInformationMessage(`No setvars_config files are specified in the settings! Please go to settings and specify at least one configuration file for initializing the custom oneAPI environment.`, `Open settings`, `Learn more about setvars_config`);
+        const tmp = await vscode.window.showInformationMessage(`No setvars_config files are specified in the settings. Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.`, `Open settings`, `Learn more about SETVARS_CONFIG`);
         if (tmp === `Open settings`) {
             await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-configurator`);
         }
-        if (tmp === `Learn more about setvars_config`) {
+        if (tmp === `Learn more about SETVARS_CONFIG`) {
             vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
-                "https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
-                : 'https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+                "https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
+                : 'https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
         }
         return undefined;
     }
@@ -144,18 +145,18 @@ export abstract class OneApiEnv {
                 if (existsSync(pathToSetvars)) {
                     return pathToSetvars;
                 } else {
-                    vscode.window.showErrorMessage('Could not find setvars script by the path specified for ONEAPI_ROOT in the settings. You can ignore this problem and continue with the setvars automatic search, or if it fails, specify the location manually. To fix this problem, go to the extension settings and specify the correct path for ONEAPI_ROOT.');
+                    vscode.window.showErrorMessage('Could not find the setvars script using the path specified in the settings for ONEAPI_ROOT. Select continue to search for setvars automatically. Select skip to specify the location manually: open settings search for ONEAPI_ROOT to specify the path to the installation folder.');
                     const options: vscode.InputBoxOptions = {
-                        placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT`
+                        placeHolder: `Could not find setvars at the path specified in ONEAPI_ROOT.`
                     };
                     const optinosItems: vscode.QuickPickItem[] = [];
                     optinosItems.push({
                         label: 'Continue',
-                        description: 'Try to find setvars automatically'
+                        description: 'Try to find setvars automatically.'
                     });
                     optinosItems.push({
                         label: 'Skip setvars search',
-                        description: 'Allows to go directly to specifying the path to setvars'
+                        description: 'Open settings and change ONEAPI_ROOT to specify the installation folder.'
                     });
 
                     const tmp = await vscode.window.showQuickPick(optinosItems, options);
@@ -177,7 +178,7 @@ export abstract class OneApiEnv {
 
             if (paths.length > 0 && paths.length !== 1) {
                 const options: vscode.InputBoxOptions = {
-                    placeHolder: `Found multiple paths to oneAPI environment script. Choose which one to use:`
+                    placeHolder: `Found multiple paths to oneAPI environment script (setvars). Choose which one to use:`
                 };
                 const tmp = await vscode.window.showQuickPick(paths, options);
                 if (!tmp) {
@@ -214,7 +215,7 @@ export abstract class OneApiEnv {
                     paths.pop();
                     if (paths.length > 0 && paths.length !== 1) {
                         const options: vscode.InputBoxOptions = {
-                            placeHolder: `Found multiple paths to oneAPI environment script. Choose which one to use:`
+                            placeHolder: `Found multiple paths to oneAPI environment script (setvars). Choose which one to use:`
                         };
                         const tmp = await vscode.window.showQuickPick(paths, options);
                         if (tmp) {
@@ -241,7 +242,7 @@ export abstract class OneApiEnv {
             const setvarsConfigPath = await this.getSetvarsConfigPath();
             if (setvarsConfigPath) {
                 this.activeEnv = parse(setvarsConfigPath).base;
-                vscode.window.showInformationMessage(`The config file found in ${setvarsConfigPath} is used`);
+                vscode.window.showInformationMessage(`Environment set using the config file found in ${setvarsConfigPath}.`);
                 args = `--config="${setvarsConfigPath}"`;
             } else {
                 return false;
@@ -266,7 +267,7 @@ export abstract class OneApiEnv {
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "Setting up oneAPI environment...",
+            title: "Setting up the oneAPI environment...",
             cancellable: true
         }, async (_progress, token) => {
             token.onCancellationRequested(() => {
@@ -291,12 +292,13 @@ export abstract class OneApiEnv {
                 .on("close", (code, signal) => {
                     if (code || signal) {
                         this.collection.clear();
-                        vscode.window.showErrorMessage(`Something went wrong!\n Error: ${code ? code : signal}. oneAPI environment not applied.`);
+                        vscode.window.showErrorMessage(`Error: ${code ? code : signal}. Open settings and search for SETVARS and change the value of SETVARS_CONFIG to specify your custom configuration file, or change the value of ONEAPI_ROOT to specify your installation folder.`);
                     }
                     resolve();
                 })
                 .on("error", (err) => {
                     this.collection.clear();
+                    vscode.window.showErrorMessage(`Error: ${err} oneAPI environment not applied. Open settings and search for SETVARS and change the value of SETVARS_CONFIG to specify your custom configuration file, or change the value of ONEAPI_ROOT to specify your installation folder`);
                     vscode.window.showErrorMessage(`Something went wrong!\n Error: ${err} oneAPI environment not applied.`);
                     reject(err);
                 });
@@ -365,7 +367,7 @@ export abstract class OneApiEnv {
 
     protected checkPlatform(): boolean {
         if ((process.platform !== 'win32') && (process.platform !== 'linux')) {
-            vscode.window.showErrorMessage("Failed to activate 'Environment Configurator for Intel oneAPI Toolkits' extension. The extension is only supported on Linux and Windows", { modal: true });
+            vscode.window.showErrorMessage("Failed to activate the 'Environment Configurator for Intel oneAPI Toolkits' extension. The extension is only supported on Linux and Windows.", { modal: true });
             return false;
         }
         return true;
@@ -407,7 +409,7 @@ export class MultiRootEnv extends OneApiEnv {
             return;
         }
         if (this.initialEnv.get("SETVARS_COMPLETED")) {
-            await vscode.window.showWarningMessage("OneAPI environment has already been initialized outside of the configurator. There is no guarantee that the environment management features will work correctly. It is recommended to run Visual Studio Code without prior oneAPI product environment initialization.", { modal: true });
+            await vscode.window.showWarningMessage("The oneAPI environment has already been initialized outside of the configurator, which may interfere with environment management in Visual Studio Code. Do not initialize the oneAPI product environment before running Visual Studio Code.", { modal: true });
             return;
         }
 
@@ -436,12 +438,12 @@ export class MultiRootEnv extends OneApiEnv {
             return;
         }
         if (this.activeEnv === Labels.undefined) {
-            vscode.window.showInformationMessage("Environment variables have not been configured previously and cannot be cleared.");
+            vscode.window.showInformationMessage("Environment variables were not configured, so environment is not set. No further action needed.");
             return;
         }
         await this.restoreVscodeEnv();
         await this.removeEnv(this.activeEnv);
-        vscode.window.showInformationMessage("oneAPI environment removed successfully.");
+        vscode.window.showInformationMessage("oneAPI environment has been successfully removed.");
         return;
     }
 
@@ -450,20 +452,20 @@ export class MultiRootEnv extends OneApiEnv {
             return false;
         }
         if (this.envCollection.length < 2) {
-            const tmp = await vscode.window.showInformationMessage(`Nothing to switch! You can specify custom environment parameters using the setvars_config file on the settings page.`, `Open settings`, `Learn more about setvars_config`);
-            if (tmp === `Open settings`) {
+            const tmp = await vscode.window.showInformationMessage(`Alternate environment is not available. Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.`, `Open settings.`, `Learn more about SETVARS_CONFIG.`);
+            if (tmp === `Open settings.`) {
                 await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-configurator`);
             }
-            if (tmp === `Learn more about setvars_config`) {
+            if (tmp === `Learn more about SETVARS_CONFIG.`) {
                 vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
-                    "https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
-                    : 'https://software.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+                    "https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
+                    : 'https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
             }
             return false;
         }
         const optinosItems: vscode.QuickPickItem[] = [];
         const options: vscode.InputBoxOptions = {
-            placeHolder: `Please select which setvars_config file you want to set:`
+            placeHolder: `Select the config file to be used to set the environment:`
         };
         this.envCollection.forEach(async function (oneEnv) {
             optinosItems.push({
@@ -473,7 +475,7 @@ export class MultiRootEnv extends OneApiEnv {
         });
         optinosItems.push({
             label: Labels.skip,
-            description: 'Do not change the environment'
+            description: 'Do not change the environment.'
         });
         const env = await vscode.window.showQuickPick(optinosItems, options);
         if (!env || env?.label === Labels.skip) {

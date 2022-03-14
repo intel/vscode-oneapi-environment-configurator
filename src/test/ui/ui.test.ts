@@ -1,5 +1,5 @@
 import { Workbench, Notification, WebDriver, VSBrowser, NotificationType, InputBox, ModalDialog } from 'vscode-extension-tester';
-import { DialogHandler } from 'vscode-extension-tester-native';
+// import { DialogHandler } from 'vscode-extension-tester-native';
 import { expect } from 'chai';
 import { join } from 'path';
 import { writeFileSync, mkdirSync, rmdirSync } from 'fs';
@@ -62,9 +62,9 @@ describe('DevFlow extension UI Tests', function () {
         before(async () => {
             const workbench = new Workbench();
             await workbench.executeCommand('File: Open Folder');
-            const dialog = await DialogHandler.getOpenDialog();
-            await dialog.selectPath(samplesPath);
-            await dialog.confirm();
+            // const dialog = await DialogHandler.getOpenDialog();
+            // await dialog.selectPath(samplesPath);
+            // await dialog.confirm();
             createSetvarsConfig(samplesPath);
         });
 

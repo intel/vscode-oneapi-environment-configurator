@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Intel Corporation
  * Licensed under the MIT License. See the project root LICENSE
- * 
+ *
  * SPDX-License-Identifier: MIT
  */
 
@@ -25,7 +25,7 @@ function checkExtensionsConflict(id: string) {
                 const GoToUninstall = 'Uninstall deprecated';
                 const deprExtName = deprecatedExtension.packageJSON.displayName;
                 const actualExtName = actualExtension.packageJSON.displayName;
-                vscode.window.showInformationMessage(`${deprExtName} is an deprecated version of the ${actualExtName}! This may lead to the unavailability of overlapping functions.`, GoToUninstall, 'Ignore')
+                vscode.window.showInformationMessage(`${deprExtName} is a deprecated version of the ${actualExtName}. This may lead to the unavailability of overlapping functions.`, GoToUninstall, 'Ignore')
                     .then((selection) => {
                         if (selection === GoToUninstall) {
                             vscode.commands.executeCommand('workbench.extensions.uninstallExtension', deprecatedExtension.id).then(function () {
