@@ -1,5 +1,10 @@
 # Change Log
 
+##  0.2.5
+
+- Refactored info and error messages
+- Updated test libraries
+
 ##  0.2.3
 
 - Added check for avoiding conflicts with deprecated versions of extensions.
