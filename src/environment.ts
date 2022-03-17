@@ -422,7 +422,7 @@ export class MultiRootEnv extends OneApiEnv {
                 this.envCollection.push(this.activeEnv);
             }
             else {
-                vscode.window.showInformationMessage(`Environment ${this.activeEnv} was redefined`);
+                vscode.window.showInformationMessage(`The environment of the same name is already exist. ${this.activeEnv} environment was redefined`);
             }
             const activeEnvCollection = new Map();
             this.collection.forEach((k, m) => {

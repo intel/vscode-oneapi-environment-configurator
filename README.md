@@ -1,4 +1,4 @@
-# Environment Configurator for Intel(R) oneAPI Toolkits
+# Environment Configurator for Intel® oneAPI Toolkits
 
 #### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://www.intel.com/content/www/us/en/develop/documentation/using-vs-code-with-intel-oneapi/intel-oneapi-extensions-for-visual-studio-code/environment-configurator-extension.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
@@ -22,7 +22,7 @@ extensions for oneAPI Toolkits, see [Using Visual Studio Code with Intel® oneAP
 You can specify the direct path to the oneAPI install directory in order to avoid searching for the environment every time the environment is initialized.
 
 1.	Press `Ctrl+, (or File -> Preferences -> Settings)` to open the Settings.
-2.  On the left side of the Settings window, select `Extensions>Environment Configurator for Intel(R) oneAPI Toolkits`.
+2.  On the left side of the Settings window, select `Extensions>Environment Configurator for Intel® oneAPI Toolkits`.
 3.  In the "ONEAPI_ROOT" field, specify the path to the installation directory of the oneAPI toolkit.
 
 
@@ -31,7 +31,7 @@ You can limit the initialization of the environment to a specific set of oneAPI 
 
 For this you need:
 1.	Press `Ctrl+, ( or File -> Preferences -> Settings )` to open the Settings.
-2.  On the left side of the Settings window, select `Extensions>Environment Configurator for Intel(R) oneAPI Toolkits`.
+2.  On the left side of the Settings window, select `Extensions>Environment Configurator for Intel® oneAPI Toolkits`.
 3.  In the `SETVARS_CONFIG` area, click `Add Item` and provide the path to your setvars configuration file.
 4.  Press `Ctrl+Shift+P` to open the Command Palette. `Type oneAPI` and select `Intel oneAPI: Initialize custom environment variables using SETVARS_CONFIG`.
 5.	To switch the environment, click `Intel oneAPI: Switch environment` and select the configuration file that the environment is associated with.
