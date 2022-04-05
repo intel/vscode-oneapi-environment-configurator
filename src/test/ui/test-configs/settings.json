@@ -2,6 +2,7 @@
     "window.titleBarStyle":"custom",
     "workbench.editor.enablePreview":false,
     "window.restoreFullscreen":true,
+    "files.simpleDialog.enable": true,
     "window.newWindowDimensions":"maximized",
     "window.dialogStyle": "custom"
 }
