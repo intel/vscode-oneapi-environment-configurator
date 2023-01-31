@@ -1,7 +1,3 @@
-# DISCONTINUATION OF PROJECT #
-This project will no longer be maintained by Intel.
-Intel has ceased development and contributions including, but not limited to, maintenance, bug fixes, new releases, or updates, to this project.
-Intel no longer accepts patches to this project.
 # Environment Configurator for Intel® oneAPI Toolkits
 
 #### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://www.intel.com/content/www/us/en/develop/documentation/using-vs-code-with-intel-oneapi/intel-oneapi-extensions-for-visual-studio-code/environment-configurator-extension.html) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
