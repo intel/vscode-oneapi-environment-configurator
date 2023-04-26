@@ -72,23 +72,35 @@ export abstract class OneApiEnv {
 
     protected async getEnvironment(isDefault: boolean): Promise<boolean | undefined> {
         const setvarsPath = await this.findSetvarsPath();
+
         if (!setvarsPath) {
             const fileExtension = process.platform === 'win32' ? 'bat' : 'sh';
-            vscode.window.showInformationMessage(`Could not find path to setvars.${fileExtension} or the path was not selected. Open settings and search for ONEAPI_ROOT to specify the path to the installation folder, then use the command palette to Initialize environment variables.`);
-            const options: vscode.OpenDialogOptions = {
-                canSelectMany: false,
-                filters: {
-                    'oneAPI setvars file': [fileExtension],
-                }
-            };
-
-            const setVarsFileUri = await vscode.window.showOpenDialog(options);
-            if (setVarsFileUri && setVarsFileUri[0]) {
-                return await this.runSetvars(setVarsFileUri[0].fsPath, isDefault);
-            } else {
-                vscode.window.showErrorMessage(`Path to setvars.${fileExtension} is invalid.\n Open settings and search for ONEAPI_ROOT to specify the path to the installation folder, then use the command palette to Initialize environment variables.${fileExtension}.`, { modal: true });
+            const install = 'Install Intel® oneAPI Toolkit';
+            const setSetvars = 'Set path to setvars manually';
+            const option = await vscode.window.showErrorMessage(
+                `Could not find path to setvars.${fileExtension}. Probably Intel® oneAPI Toolkit is not installed or you can set path to setvars.${fileExtension} manually.`,
+                install, setSetvars);
+            if (option === install) {
+                vscode.env.openExternal(vscode.Uri.parse(
+                    'https://www.intel.com/content/www/us/en/developer/tools/oneapi/toolkits.html'));
                 return false;
+            } else if (option === setSetvars) {
+                const options: vscode.OpenDialogOptions = {
+                    canSelectMany: false,
+                    filters: {
+                        'oneAPI setvars file': [fileExtension],
+                    }
+                };
+
+                const setVarsFileUri = await vscode.window.showOpenDialog(options);
+                if (setVarsFileUri && setVarsFileUri[0]) {
+                    return await this.runSetvars(setVarsFileUri[0].fsPath, isDefault);
+                } else {
+                    vscode.window.showErrorMessage(`Path to setvars.${fileExtension} is invalid.\n Open settings and search for ONEAPI_ROOT to specify the path to the installation folder, then use the command palette to Initialize environment variables.${fileExtension}.`, { modal: true });
+                    return false;
+                }
             }
+            return false;
         } else {
             vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${setvarsPath}`);
             return await this.runSetvars(setvarsPath, isDefault);

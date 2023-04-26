@@ -10,7 +10,8 @@ extensions for oneAPI Toolkits, see [Using Visual Studio Code with Intel® oneAP
 
 You can initialize your environment with following steps.
 
-1. Press `Ctrl+Shift+P (or View -> Command Palette...)` to open the Command Palette.
+1.  Install one of [Intel® oneAPI Toolkits](https://www.intel.com/content/www/us/en/developer/tools/oneapi/toolkits.html#base-kit). Use Intel® oneAPI Base Toolkit as a default.
+2.  Open your project in VSCode and press `Ctrl+Shift+P (or View -> Command Palette...)` to open the Command Palette.
 2. Type **Intel oneAPI** to view options of the installed extensions.
 3. Click on `Intel oneAPI: Initialize default environment variables`.
 4. If Visual Studio Code* asks for a location, locate your setvars script. **Linux**: the script is located in `<install dir>/intel/oneapi`. The default installation location is `/opt/intel/oneapi`. **Windows**: the script is located in `<install dir>\Intel\oneAPI\`. The default installation location is `C:\Program Files (x86)\Intel\oneAPI`.
@@ -43,11 +44,10 @@ Note that the name of the configuration file can be arbitrary, but it will be us
 
 ## Contributing
 Install Visual Studio Code (at least version 1.46) and open this project within it.
-You may also need `yarn` installed, and `node+npm`:
+You may also need `node+npm` installed:
 
 ```bash
-npm install -g yarn
-yarn install
+npm i
 code .
 ```
 

@@ -1,4 +1,10 @@
 # Change Log
+
+## 0.2.9
+
+- Fixed xml2js dependency vulnerability
+- Added option to download Intel® oneAPI Toolkits while setting up the enviroment
+
 ##  0.2.8
 
 - Updated dependencies

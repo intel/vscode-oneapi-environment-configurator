@@ -2,7 +2,7 @@
 	"name": "oneapi-environment-configurator",
 	"displayName": "Environment Configurator for Intel® oneAPI Toolkits",
 	"description": "Configure environment for working with Intel® oneAPI Toolkits",
-	"version": "0.2.8",
+	"version": "0.2.9",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
@@ -76,8 +76,7 @@
 		"mocha": "^10.2.0",
 		"typescript": "^5.0.2",
 		"@vscode/vsce": "^2.18.0",
-		"vscode-extension-tester": "^5.5.1",
-		"@vscode/test-electron": "^2.3.0"
+		"vscode-extension-tester": "^5.5.1"
 	},
 	"dependencies": {},
 	"repository": {
