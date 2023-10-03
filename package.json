@@ -7,7 +7,7 @@
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
 	"engines": {
-		"vscode": "^1.76.0"
+		"vscode": "^1.82.0"
 	},
 	"categories": [
 		"Other"
@@ -65,18 +65,18 @@
 		"test": "./node_modules/.bin/extest setup-and-run -y -o ./src/test/ui/test-configs/settings.json -m ./src/test/ui/test-configs/.mocharc.js ./out/test/ui/ui.test.js"
 	},
 	"devDependencies": {
-		"@types/chai": "^4.3.4",
-		"@types/mocha": "^10.0.1",
-		"@types/node": "^18.15.11",
-		"@types/vscode": "^1.76.0",
-		"@typescript-eslint/eslint-plugin": "^5.57.0",
-		"@typescript-eslint/parser": "^5.57.0",
-		"chai": "^4.3.7",
-		"eslint": "^8.37.0",
+		"@types/chai": "^4.3.6",
+		"@types/mocha": "^10.0.2",
+		"@types/node": "^20.8.2",
+		"@types/vscode": "^1.82.0",
+		"@typescript-eslint/eslint-plugin": "^6.7.4",
+		"@typescript-eslint/parser": "^6.7.4",
+		"chai": "^4.3.10",
+		"eslint": "^8.50.0",
 		"mocha": "^10.2.0",
-		"typescript": "^5.0.2",
-		"@vscode/vsce": "^2.18.0",
-		"vscode-extension-tester": "^5.5.1"
+		"typescript": "^5.2.2",
+		"@vscode/vsce": "^2.21.1",
+		"vscode-extension-tester": "^5.9.1"
 	},
 	"dependencies": {},
 	"repository": {
