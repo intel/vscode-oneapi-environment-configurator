@@ -1,21 +1,25 @@
 # Change Log
 
+## 0.2.11
+
+- Updated versions of 3rd party dependencies
+
 ## 0.2.10
 
-- Fixed word-wrap dependency vulnerability
+- Updated version of 'word-wrap' dependency
 
 ## 0.2.9
 
-- Fixed xml2js dependency vulnerability
+- Updated version of 'xml2js' dependency
 - Added option to download Intel® oneAPI Toolkits while setting up the enviroment
 
 ##  0.2.8
 
-- Updated dependencies
+- Updated versions of 3rd party dependencies
 
 ##  0.2.7
 
-- Updated dependencies
+- Updated versions of 3rd party dependencies
 
 ##  0.2.5
 

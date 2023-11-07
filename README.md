@@ -31,6 +31,8 @@ You can specify the direct path to the oneAPI install directory in order to avoi
 ## Using setvars_config files for oneAPI Environment
 You can limit the initialization of the environment to a specific set of oneAPI components, and also initialize the environment for a specific version of the component.
 
+Due to changes in directory layout, 2024.0 version of Intel® oneAPI Toolkits include 2 environment setup scripts - setvars and oneapi-vars. Note that oneapi-vars script **doesn't work with config files**, so you can only use setvars script for this case.
+
 For this you need:
 1. Press `Ctrl+, ( or File -> Preferences -> Settings )` to open the Settings.
 2. On the left side of the Settings window, select `Extensions>Environment Configurator for Intel® oneAPI Toolkits`.
@@ -39,11 +41,10 @@ For this you need:
 5. To switch the environment, click `Intel oneAPI: Switch environment` and select the configuration file that the environment is associated with.
 6. To delete the oneAPI environment, open the Command Palette and select `Intel oneAPI: Clear environment variables`.
 
-
-Note that the name of the configuration file can be arbitrary, but it will be used as an environment identifier. Using different files with the same name will result in the reinitialization of the current environment and not the creation of a new one.
+Also the name of the configuration file can be arbitrary, but it will be used as an environment identifier. Using different files with the same name will result in the reinitialization of the current environment and not the creation of a new one.
 
 ## Contributing
-Install Visual Studio Code (at least version 1.46) and open this project within it.
+Install Visual Studio Code (at least version 1.83.1) and open this project within it.
 You may also need `node+npm` installed:
 
 ```bash
