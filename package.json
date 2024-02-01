@@ -56,7 +56,7 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
+		"vscode:prepublish": "npm run compile && echo 1",
 		"compile": "tsc -p ./",
 		"package": "vsce package",
 		"lint": "eslint src --ext ts",
