@@ -12,8 +12,7 @@ permissions: read-all
 
 jobs:
   build-extensions:
-    runs-on: linux
-    container: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@1e31de5234b9f8995739874a8ce0492dc87873e2 #v4
