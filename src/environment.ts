@@ -10,20 +10,15 @@ import * as vscode from 'vscode';
 import { execSync, spawn } from 'child_process';
 import { posix, join, parse } from 'path';
 import { existsSync, readdirSync } from 'fs';
+
 import { Storage } from './utils/storage_utils';
 import { getPSexecutableName } from './utils/terminal_utils';
-
-enum Labels {
-    undefined = 'Default environment without oneAPI',
-    defaultOneAPI = 'Default oneAPI config',
-    skip = 'Skip'
-}
+import messages from './messages';
 
 type CmdForRunSetvars = {
     interpreter: string,
     arguments: string[]
 };
-
 
 export abstract class OneApiEnv {
     protected collection: vscode.EnvironmentVariableCollection;
@@ -39,24 +34,32 @@ export abstract class OneApiEnv {
         if (configsPaths?.length === 0 || configsPaths === undefined) {
             this._setvarsConfigsPaths = undefined;
         } else {
-            configsPaths.forEach(async function (onePath, index, pathList) {
-                pathList[index] = posix.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep);
+            configsPaths.forEach(async function(onePath, index, pathList) {
+                pathList[index] = posix.normalize(onePath.replace('\r', '')).split(/[\\\/]/g).join(posix.sep);
             });
             this._setvarsConfigsPaths = configsPaths;
         }
+    }
+
+    public get setvarsConfigsPaths() {
+        return this._setvarsConfigsPaths;
     }
 
     public set oneAPIRootPath(rootPath: string | undefined) {
         if (rootPath?.length === 0 || rootPath === undefined) {
             this._oneAPIRootPath = undefined;
         } else {
-            this._oneAPIRootPath = posix.normalize(rootPath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep);
+            this._oneAPIRootPath = posix.normalize(rootPath.replace('\r', '')).split(/[\\\/]/g).join(posix.sep);
         }
+    }
+
+    public get oneAPIRootPath() {
+        return this._oneAPIRootPath;
     }
 
     constructor(context: vscode.ExtensionContext) {
         this.initialEnv = new Map();
-        this.activeEnv = Labels.undefined;
+        this.activeEnv = messages.defaultEnv;
         this.collection = context.environmentVariableCollection;
         this.collection.clear();
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
@@ -71,52 +74,56 @@ export abstract class OneApiEnv {
     abstract switchEnv(): Promise<boolean>;
 
     protected async getEnvironment(isDefault: boolean): Promise<boolean | undefined> {
-        let envScripts = await this.findEnvScript("setvars");
+        let envScripts = await this.findEnvScript('setvars');
+
         if (isDefault) {
-            const oneapiVars = await this.findEnvScript("oneapi-vars");
+            const oneapiVars = await this.findEnvScript('oneapi-vars');
+
             envScripts = envScripts.concat(oneapiVars);
         }
         if (envScripts.length === 0) {
             const fileExtension = process.platform === 'win32' ? 'bat' : 'sh';
-            const install = 'Install Intel® oneAPI Toolkit';
-            const setPathToEnvScript = 'Set path to environment script manually';
             const option = await vscode.window.showErrorMessage(
-                `Could not find path to environment script.${fileExtension}. Probably Intel® oneAPI Toolkit is not installed or you can set path to setvars.${fileExtension} manually.`,
-                install, setPathToEnvScript);
-            if (option === install) {
+                messages.errorEnvScriptPath(fileExtension),
+                messages.installToolkit, messages.setPathToEnvScript);
+
+            if (option === messages.installToolkit) {
                 vscode.env.openExternal(vscode.Uri.parse(
-                    'https://www.intel.com/content/www/us/en/developer/tools/oneapi/toolkits.html'));
+                    messages.toolkitsLink));
                 return false;
-            } else if (option === setPathToEnvScript) {
+            } else if (option === messages.setPathToEnvScript) {
                 const options: vscode.OpenDialogOptions = {
                     canSelectMany: false,
                     filters: {
-                        'oneAPI environmnet script': [fileExtension],
+                        'oneAPI environmnet script': [fileExtension]
                     }
                 };
 
                 const setVarsFileUri = await vscode.window.showOpenDialog(options);
+
                 if (setVarsFileUri && setVarsFileUri[0]) {
                     return await this.runSetvars(setVarsFileUri[0].fsPath, isDefault);
                 } else {
-                    vscode.window.showErrorMessage(`Path to setvars.${fileExtension} is invalid.\n Open settings and search for ONEAPI_ROOT to specify the path to the installation folder, then use the command palette to Initialize environment variables.${fileExtension}.`, { modal: true });
+                    vscode.window.showErrorMessage(messages.errorSetvarsPath(fileExtension), { modal: true });
                     return false;
                 }
             }
             return false;
         } else {
             let envScriptToUse = null;
+
             if (envScripts.length > 1) {
                 const options: vscode.InputBoxOptions = {
-                    placeHolder: `Found multiple paths to oneAPI environment script. Choose which one to use:`
+                    placeHolder: messages.multipleEnvScriptPaths
                 };
+
                 while (!envScriptToUse) {
                     envScriptToUse = await vscode.window.showQuickPick(envScripts, options);
                 }
             } else {
                 envScriptToUse = envScripts[0];
             }
-            vscode.window.showInformationMessage(`oneAPI environment script was found in the following path: ${envScriptToUse}`);
+            vscode.window.showInformationMessage(messages.envScriptFound(envScriptToUse));
             return await this.runSetvars(envScriptToUse, isDefault);
         }
     }
@@ -124,81 +131,86 @@ export abstract class OneApiEnv {
     private async getSetvarsConfigPath(): Promise<string | undefined> {
         if (this._setvarsConfigsPaths) {
             const options: vscode.InputBoxOptions = {
-                placeHolder: `Please select which configuration file you want to use:`
+                placeHolder: messages.selectConfigFile
             };
             const optinosItems: vscode.QuickPickItem[] = [];
-            this._setvarsConfigsPaths.forEach(async function (onePath) {
+
+            this._setvarsConfigsPaths.forEach(async function(onePath) {
                 optinosItems.push({
                     label: parse(onePath).base,
                     description: onePath
                 });
             });
             optinosItems.push({
-                label: Labels.skip,
-                description: 'Do not apply the configuration file.'
+                label: messages.skip,
+                description: messages.notApplyConfigFile
             });
             const tmp = await vscode.window.showQuickPick(optinosItems, options);
-            if (!tmp || tmp?.label === Labels.skip) {
+
+            if (!tmp || tmp.label === messages.skip) {
                 return undefined;
             }
-            if (tmp?.description) {
-                if (!existsSync(tmp?.description)) {
-                    vscode.window.showErrorMessage(`Could not find the ${tmp?.label} file on the path ${tmp?.description} .  Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.`);
+            if (tmp.description) {
+                if (!existsSync(tmp.description)) {
+                    vscode.window.showErrorMessage(messages.errorConfigFile(tmp));
                     return undefined;
                 }
-                return tmp?.description;
+                return tmp.description;
             }
         }
-        const tmp = await vscode.window.showInformationMessage(`No setvars_config files are specified in the settings. Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.`, `Open settings`, `Learn more about SETVARS_CONFIG`);
-        if (tmp === `Open settings`) {
-            await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-configurator`);
+        const tmp = await vscode.window.showInformationMessage(messages.customConfigFile, messages.openSettings, messages.learnConfig);
+
+        if (tmp === messages.openSettings) {
+            await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:intel-corporation.oneapi-environment-configurator');
         }
-        if (tmp === `Learn more about SETVARS_CONFIG`) {
-            vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
-                "https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
-                : 'https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+        if (tmp === messages.learnConfig) {
+            vscode.env.openExternal(vscode.Uri.parse(process.platform === 'win32'
+                ? messages.learnConfigLinkWin
+                : messages.learnConfigLinkLinMac));
         }
         return undefined;
     }
 
     private async findEnvScript(envScriptName: string): Promise<string[]> {
         try {
-            // 0. Check oneAPI Root Path from setting.json
+        // 0. Check oneAPI Root Path from setting.json
             if (this._oneAPIRootPath) {
                 const pathToEnvScript = join(this._oneAPIRootPath, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`);
 
                 if (existsSync(pathToEnvScript)) {
                     return [pathToEnvScript];
                 } else {
-                    vscode.window.showErrorMessage(`Could not find the ${envScriptName} script using the path specified in the settings for ONEAPI_ROOT. Select continue to search for setvars automatically. Select skip to specify the location manually: open settings search for ONEAPI_ROOT to specify the path to the installation folder.`);
                     const options: vscode.InputBoxOptions = {
-                        placeHolder: `Could not find ${envScriptName} at the path specified in ONEAPI_ROOT.`
+                        placeHolder: messages.noEnvScriptByPath(envScriptName)
                     };
                     const optinosItems: vscode.QuickPickItem[] = [];
+
                     optinosItems.push({
-                        label: 'Continue',
-                        description: `Try to find ${envScriptName} automatically.`
+                        label: messages.continue,
+                        description: messages.autoEnvScriptSearch(envScriptName)
                     });
                     optinosItems.push({
-                        label: `Skip ${envScriptName} search`,
-                        description: 'Open settings and change ONEAPI_ROOT to specify the installation folder.'
+                        label: messages.skipEnvScriptSearch(envScriptName),
+                        description: messages.openSettingsToChangeRoot
                     });
 
                     const tmp = await vscode.window.showQuickPick(optinosItems, options);
-                    if (tmp?.label !== 'Continue') {
+
+                    if (tmp?.label !== messages.continue) {
                         return [];
                     }
                 }
             }
 
             // 1.check $PATH for environment script
-            const cmdParsePath = process.platform === 'win32' ?
-                `${this.powerShellExecName} -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"` :
-                "env | grep 'PATH' | sed 's/'PATH='//g; s/:/\\n/g'| awk '/oneapi$/'";
+            const cmdParsePath = process.platform === 'win32'
+                ? `${this.powerShellExecName} -Command "$env:Path -split ';' | Select-String -Pattern 'oneapi$' | foreach{$_.ToString()} | ? {$_.trim() -ne '' }"`
+                : 'env | grep \'PATH\' | sed \'s/\'PATH=\'//g; s/:/\\n/g\'| awk \'/oneapi$/\'';
             const paths = execSync(cmdParsePath).toString().split('\n');
+
             paths.pop();
-            paths.forEach(async function (onePath, index, pathList) {
-                pathList[index] = join(posix.normalize(onePath.replace(`\r`, "")).split(/[\\\/]/g).join(posix.sep),
+            paths.forEach(async function(onePath, index, pathList) {
+                pathList[index] = join(posix.normalize(onePath.replace('\r', '')).split(/[\\\/]/g).join(posix.sep),
                     `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`);
             });
 
@@ -214,18 +226,21 @@ export abstract class OneApiEnv {
 
             // 2.check in $ONEAPI_ROOT
             const envScriptFromOneapiRoot = join(`${process.env.ONEAPI_ROOT}`, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`);
+
             if (existsSync(envScriptFromOneapiRoot)) {
                 return [envScriptFromOneapiRoot];
             }
             // 3.check in global installation path
-            const globalToolkitPath = process.platform === 'win32' ?
-                join(`${process.env['ProgramFiles(x86)']}`, `Intel`, `oneAPI`) :
-                join('/opt', 'intel', 'oneapi');
-            if (envScriptName === "setvars" && existsSync(join(globalToolkitPath, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`))) {
+            const globalToolkitPath = process.platform === 'win32'
+                ? join(`${process.env['ProgramFiles(x86)']}`, 'Intel', 'oneAPI')
+                : join('/opt', 'intel', 'oneapi');
+
+            if (envScriptName === 'setvars' && existsSync(join(globalToolkitPath, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`))) {
                 return [join(globalToolkitPath, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`)];
             }
-            if (envScriptName === "oneapi-vars") {
+            if (envScriptName === 'oneapi-vars') {
                 const pathes: string[] = [];
+
                 readdirSync(globalToolkitPath).forEach(folder => {
                     if (existsSync(join(globalToolkitPath, folder, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`))) {
                         pathes.push(join(globalToolkitPath, folder, `${envScriptName}.${process.platform === 'win32' ? 'bat' : 'sh'}`));
@@ -236,35 +251,31 @@ export abstract class OneApiEnv {
                 }
             }
             if (process.platform !== 'win32') {
-                {
-                    // 4.check in local installation path
-                    if (envScriptName === "setvars") {
-                        const posiblePath = join(`${process.env.HOME}`, "intel", "oneapi", `${envScriptName}.sh`);
-                        if (existsSync(posiblePath)) {
-                            return [posiblePath];
-                        }
-                    }
-                    else {
+                // 4.check in local installation path
+                if (envScriptName === 'setvars') {
+                    const posiblePath = join(`${process.env.HOME}`, 'intel', 'oneapi', `${envScriptName}.sh`);
 
+                    if (existsSync(posiblePath)) {
+                        return [posiblePath];
                     }
+                }
 
-                    //5.check in local-custom installation path
-                    //Path does not require normalization because it is generated only for Linux
-                    const paths = execSync(`\"\${HOME}\" -mindepth 3 -maxdepth 3 -name \"${envScriptName}.sh\"`).toString().split('\n');
-                    paths.pop();
-                    paths.forEach((path, index) => {
-                        if (!existsSync(path)) {
-                            paths.splice(index, 1);
-                        }
-                    });
-                    if (paths.length > 0) {
-                        return paths;
+                // 5.check in local-custom installation path
+                // Path does not require normalization because it is generated only for Linux
+                const paths = execSync(`\"\${HOME}\" -mindepth 3 -maxdepth 3 -name \"${envScriptName}.sh\"`).toString().split('\n');
+
+                paths.pop();
+                paths.forEach((path, index) => {
+                    if (!existsSync(path)) {
+                        paths.splice(index, 1);
                     }
+                });
+                if (paths.length > 0) {
+                    return paths;
                 }
             }
             return [];
-        }
-        catch (err) {
+        } catch (err) {
             console.error(err);
             return [];
         }
@@ -272,38 +283,39 @@ export abstract class OneApiEnv {
 
     private async runSetvars(fspath: string, isDefault: boolean): Promise<boolean> {
         let args = '';
+
         if (!isDefault) {
             const setvarsConfigPath = await this.getSetvarsConfigPath();
+
             if (setvarsConfigPath) {
                 this.activeEnv = parse(setvarsConfigPath).base;
-                vscode.window.showInformationMessage(`Environment set using the config file found in ${setvarsConfigPath}.`);
+                vscode.window.showInformationMessage(messages.foundSetvars(setvarsConfigPath));
                 args = `--config="${setvarsConfigPath}"`;
             } else {
                 return false;
             }
         } else {
-            this.activeEnv = Labels.defaultOneAPI;
+            this.activeEnv = messages.defaultOneAPI;
         }
 
         const cmd: CmdForRunSetvars =
-            process.platform === 'win32' ?
-                {
+            process.platform === 'win32'
+                ? {
                     interpreter: 'cmd.exe',
-                    arguments: args ?
-                        ['/c', `""${fspath}" ${args} && set"`] :
-                        ['/c', `""${fspath}" && set"`]
-                } :
-                {
+                    arguments: args
+                        ? ['/c', `""${fspath}" ${args} && set"`]
+                        : ['/c', `""${fspath}" && set"`]
+                }
+                : {
                     interpreter: 'bash',
                     arguments: ['-c', `. "${fspath}" ${args} > /dev/null && env -0`]
                 };
 
-
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "Setting up the oneAPI environment...",
+            title: messages.settingUp,
             cancellable: true
-        }, async (_progress, token) => {
+        }, async(_progress, token) => {
             token.onCancellationRequested(() => {
                 this.collection.clear();
                 return false; // if user click on CANCEL
@@ -317,36 +329,36 @@ export abstract class OneApiEnv {
     }
 
     private async execSetvarsCatch(token: vscode.CancellationToken, cmd: CmdForRunSetvars): Promise<void> {
-        return new Promise<void>(async (resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             if (token.isCancellationRequested) {
                 this.collection.clear();
                 return;
             }
             const childProcess = spawn(cmd.interpreter, cmd.arguments, { windowsVerbatimArguments: true })
-                .on("close", (code, signal) => {
+                .on('close', (code, signal) => {
                     if (code || signal) {
                         this.collection.clear();
-                        vscode.window.showErrorMessage(`Error: ${code ? code : signal}. Open settings and search for SETVARS and change the value of SETVARS_CONFIG to specify your custom configuration file, or change the value of ONEAPI_ROOT to specify your installation folder.`);
+                        vscode.window.showErrorMessage(messages.errorRunSetVars(code, signal));
                     }
                     resolve();
                 })
-                .on("error", (err) => {
+                .on('error', (err) => {
                     this.collection.clear();
                     vscode.window.showErrorMessage(`Error: ${err} oneAPI environment not applied. Open settings and search for SETVARS and change the value of SETVARS_CONFIG to specify your custom configuration file, or change the value of ONEAPI_ROOT to specify your installation folder`);
-                    vscode.window.showErrorMessage(`Something went wrong!\n Error: ${err} oneAPI environment not applied.`);
                     reject(err);
                 });
 
             childProcess.stdout.setEncoding('utf8');
-            childProcess.stdout?.on("data", (d: string) => {
+            childProcess.stdout?.on('data', (d: string) => {
                 const separator = process.platform === 'win32' ? '\n' : '\u0000';
                 const vars = d.split(separator);
-                vars.forEach(async (l) => {
+
+                vars.forEach(async(l) => {
                     const e = l.indexOf('=');
                     const k = <string>l.substr(0, e);
-                    const v = <string>l.substr((e + 1)).replace(`\r`, "");
+                    const v = <string>l.substr((e + 1)).replace('\r', '');
 
-                    if (k === "" || v === "") {
+                    if (k === '' || v === '') {
                         return;
                     }
 
@@ -360,7 +372,7 @@ export abstract class OneApiEnv {
                     process.env[k] = v;
                 });
             });
-            childProcess.stderr?.on('data', function (data: string) {
+            childProcess.stderr?.on('data', function(data: string) {
                 vscode.window.showErrorMessage(data);
             });
             token.onCancellationRequested(() => childProcess.kill());
@@ -374,34 +386,32 @@ export abstract class OneApiEnv {
         this.collection.forEach((v, m) => {
             process.env[v] = m.value;
         });
-        return;
     }
 
     protected async restoreVscodeEnv(): Promise<void> {
         this.collection.forEach((k) => {
             const oldVarValue = this.initialEnv.get(k);
+
             if (!oldVarValue) {
                 delete process.env[k];
             } else {
                 process.env[k] = oldVarValue;
             }
         });
-        return;
     }
 
     protected setEnvNameToStatusBar(envName: string | undefined): void {
-        if (!envName || envName === Labels.undefined) {
-            this.statusBarItem.text = "Active environment: ".concat("not selected");
-        }
-        else {
-            this.statusBarItem.text = "Active environment: ".concat(envName);
+        if (!envName || envName === messages.defaultEnv) {
+            this.statusBarItem.text = 'Active environment: '.concat('not selected');
+        } else {
+            this.statusBarItem.text = 'Active environment: '.concat(envName);
         }
         this.statusBarItem.show();
     }
 
     protected checkPlatform(): boolean {
         if ((process.platform !== 'win32') && (process.platform !== 'linux')) {
-            vscode.window.showErrorMessage("Failed to activate the 'Environment Configurator for Intel oneAPI Toolkits' extension. The extension is only supported on Linux and Windows.", { modal: true });
+            vscode.window.showErrorMessage(messages.failedToActivate, { modal: true });
             return false;
         }
         return true;
@@ -418,6 +428,7 @@ export class MultiRootEnv extends OneApiEnv {
         this.envCollection = [];
         this.envCollection.push(this.activeEnv);
         const activeEnvCollection = new Map();
+
         this.collection.forEach((k, m) => {
             activeEnvCollection.set(k, m.value);
         });
@@ -437,13 +448,14 @@ export class MultiRootEnv extends OneApiEnv {
         }
         await this.initializeEnvironment(false);
     }
+
     async initializeEnvironment(isDefault: boolean): Promise<void> {
         if (process.platform === 'win32' && !this.powerShellExecName) {
-            vscode.window.showErrorMessage('Failed to determine powershell version. The environment will not be set.', { modal: true });
+            vscode.window.showErrorMessage(messages.failedToCheckPwsh, { modal: true });
             return;
         }
-        if (this.initialEnv.get("SETVARS_COMPLETED")) {
-            await vscode.window.showWarningMessage("The oneAPI environment has already been initialized outside of the configurator, which may interfere with environment management in Visual Studio Code. Do not initialize the oneAPI product environment before running Visual Studio Code.", { modal: true });
+        if (this.initialEnv.get('SETVARS_COMPLETED')) {
+            await vscode.window.showWarningMessage(messages.errorOneApiInstalled, { modal: true });
             return;
         }
 
@@ -454,16 +466,15 @@ export class MultiRootEnv extends OneApiEnv {
         if (await this.getEnvironment(isDefault)) {
             if (!this.envCollection.includes(this.activeEnv)) {
                 this.envCollection.push(this.activeEnv);
-            }
-            else {
-                vscode.window.showInformationMessage(`The environment of the same name is already exist. ${this.activeEnv} environment was redefined`);
+            } else {
+                vscode.window.showInformationMessage(messages.errorEnvSameName(this.activeEnv));
             }
             const activeEnvCollection = new Map();
+
             this.collection.forEach((k, m) => {
                 activeEnvCollection.set(k, m.value);
             });
             await this.storage.writeEnvToExtensionStorage(this.activeEnv, activeEnvCollection);
-
         }
     }
 
@@ -471,14 +482,13 @@ export class MultiRootEnv extends OneApiEnv {
         if (!this.checkPlatform()) {
             return;
         }
-        if (this.activeEnv === Labels.undefined) {
-            vscode.window.showInformationMessage("Environment variables were not configured, so environment is not set. No further action needed.");
+        if (this.activeEnv === messages.defaultEnv) {
+            vscode.window.showInformationMessage(messages.notConfiguredEnvVars);
             return;
         }
         await this.restoreVscodeEnv();
         await this.removeEnv(this.activeEnv);
-        vscode.window.showInformationMessage("oneAPI environment has been successfully removed.");
-        return;
+        vscode.window.showInformationMessage(messages.removedEnv);
     }
 
     async switchEnv(): Promise<boolean> {
@@ -486,33 +496,36 @@ export class MultiRootEnv extends OneApiEnv {
             return false;
         }
         if (this.envCollection.length < 2) {
-            const tmp = await vscode.window.showInformationMessage(`Alternate environment is not available. Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.`, `Open settings.`, `Learn more about SETVARS_CONFIG.`);
-            if (tmp === `Open settings.`) {
-                await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:intel-corporation.oneapi-environment-configurator`);
+            const tmp = await vscode.window.showInformationMessage(messages.alternateEnv, messages.openSettings, messages.learnConfig);
+
+            if (tmp === messages.openSettings) {
+                await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:intel-corporation.oneapi-environment-configurator');
             }
-            if (tmp === `Learn more about SETVARS_CONFIG.`) {
-                vscode.env.openExternal(vscode.Uri.parse(process.platform === "win32" ?
-                    "https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows/use-a-config-file-for-setvars-bat-on-windows.html"
-                    : 'https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos/use-a-config-file-for-setvars-sh-on-linux-or-macos.html'));
+            if (tmp === messages.learnConfig) {
+                vscode.env.openExternal(vscode.Uri.parse(process.platform === 'win32'
+                    ? messages.learnConfigLinkWin
+                    : messages.learnConfigLinkLinMac));
             }
             return false;
         }
         const optinosItems: vscode.QuickPickItem[] = [];
         const options: vscode.InputBoxOptions = {
-            placeHolder: `Select the config file to be used to set the environment:`
+            placeHolder: messages.selectConfigFileEnv
         };
-        this.envCollection.forEach(async function (oneEnv) {
+
+        this.envCollection.forEach(async function(oneEnv) {
             optinosItems.push({
                 label: oneEnv,
-                description: oneEnv === Labels.defaultOneAPI ? "To initialize the default oneAPI environment" : oneEnv === Labels.undefined ? "To initialize the environment without oneAPI" : `To initialize the oneAPI environment using the ${oneEnv} file`
+                description: oneEnv === messages.defaultOneAPI ? 'To initialize the default oneAPI environment' : oneEnv === messages.defaultEnv ? 'To initialize the environment without oneAPI' : `To initialize the oneAPI environment using the ${oneEnv} file`
             });
         });
         optinosItems.push({
-            label: Labels.skip,
-            description: 'Do not change the environment.'
+            label: messages.skip,
+            description: messages.notChangeEnv
         });
         const env = await vscode.window.showQuickPick(optinosItems, options);
-        if (!env || env?.label === Labels.skip) {
+
+        if (!env || env?.label === messages.skip) {
             return false;
         }
         this.setEnvNameToStatusBar(env.label);
@@ -529,11 +542,12 @@ export class MultiRootEnv extends OneApiEnv {
         await this.storage.set(env, undefined);
         this.collection.clear();
         const nameToDel = this.activeEnv;
-        this.envCollection = this.envCollection.filter(function (item) {
+
+        this.envCollection = this.envCollection.filter(function(item) {
             return item !== nameToDel;
         });
         await this.storage.writeEnvToExtensionStorage(env, undefined);
-        this.activeEnv = Labels.undefined;
+        this.activeEnv = messages.defaultEnv;
         this.setEnvNameToStatusBar(undefined);
     }
 
@@ -541,6 +555,7 @@ export class MultiRootEnv extends OneApiEnv {
         this.restoreVscodeEnv();
         this.collection.clear();
         const env = await this.storage.readEnvFromExtensionStorage(envName);
+
         if (!env || env.size === 0) {
             return false;
         }
@@ -553,6 +568,7 @@ export class MultiRootEnv extends OneApiEnv {
 
     private async updateEnvsInStorage(envName: string): Promise<void> {
         const env = await this.storage.readEnvFromExtensionStorage(envName);
+
         if (!env) {
             await this.addEnv(this.activeEnv);
         }

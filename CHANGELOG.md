@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.12
+
+- Added support for possible localization
+
 ## 0.2.11
 
 - Updated versions of 3rd party dependencies
