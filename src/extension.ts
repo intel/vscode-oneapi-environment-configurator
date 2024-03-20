@@ -8,6 +8,7 @@
 'use strict';
 import * as vscode from 'vscode';
 import { DevFlow } from './devFlow';
+import messages from './messages';
 enum ExtensionState {
     deprecated,
     actual,
@@ -15,25 +16,25 @@ enum ExtensionState {
 
 function checkExtensionsConflict(id: string) {
     const ExtensionsList = [['intel-corporation.oneapi-environment-variables', 'intel-corporation.oneapi-environment-configurator'],
-    ['intel-corporation.oneapi-launch-configurator', 'intel-corporation.oneapi-analysis-configurator'],
-    ['', 'intel-corporation.oneapi-gdb-debug']];
+        ['intel-corporation.oneapi-launch-configurator', 'intel-corporation.oneapi-analysis-configurator'],
+        ['', 'intel-corporation.oneapi-gdb-debug']];
+
     ExtensionsList.forEach((Extension) => {
         const actualExtension = vscode.extensions.getExtension(Extension[ExtensionState.actual]);
         const deprecatedExtension = vscode.extensions.getExtension(Extension[ExtensionState.deprecated]);
+
         if (actualExtension?.id === id) {
             if (deprecatedExtension) {
-                const GoToUninstall = 'Uninstall deprecated';
                 const deprExtName = deprecatedExtension.packageJSON.displayName;
                 const actualExtName = actualExtension.packageJSON.displayName;
-                vscode.window.showInformationMessage(`${deprExtName} is a deprecated version of the ${actualExtName}. This may lead to the unavailability of overlapping functions.`, GoToUninstall, 'Ignore')
+
+                vscode.window.showInformationMessage(messages.deprVersion(deprExtName, actualExtName), messages.uninstallDepr, messages.ignore)
                     .then((selection) => {
-                        if (selection === GoToUninstall) {
-                            vscode.commands.executeCommand('workbench.extensions.uninstallExtension', deprecatedExtension.id).then(function () {
-                                const Reload = 'Reload';
-                                vscode.window.showInformationMessage(`Completed uninstalling ${deprExtName} extension. Please reload Visual Studio Code.`, Reload)
+                        if (selection === messages.uninstallDepr) {
+                            vscode.commands.executeCommand('workbench.extensions.uninstallExtension', deprecatedExtension.id).then(function() {
+                                vscode.window.showInformationMessage(messages.completeUninstall(deprExtName), messages.reload)
                                     .then((selection) => {
-                                        if (selection === Reload)
-                                        {
+                                        if (selection === messages.reload) {
                                             vscode.commands.executeCommand('workbench.action.reloadWindow');
                                         }
                                     });
@@ -46,7 +47,6 @@ function checkExtensionsConflict(id: string) {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-
     // Checking for outdated versions of extensions in the VS Code environment
     checkExtensionsConflict(context.extension.id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -54,6 +54,5 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-    console.log("Environment Configurator for Intel oneAPI Toolkits: Goodbye");
+    console.log('Environment Configurator for Intel oneAPI Toolkits: Goodbye');
 }
-
