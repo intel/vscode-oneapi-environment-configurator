@@ -1,4 +1,4 @@
-# Environment Configurator for Intel® oneAPI Toolkits
+# Environment Configurator for Intel Software Developer Tools
 
 #### [Repository](https://github.com/intel/vscode-environment-and-launch-configurator) | [Issues](https://github.com/intel/vscode-environment-and-launch-configurator/issues) | [Documentation](https://www.intel.com/content/www/us/en/develop/documentation/using-vs-code-with-intel-oneapi/top/local-host-top/local-host.html#developing-a-visual-studio-code-project_configure-the-oneapi-environment) | [Code Samples](https://github.com/oneapi-src/oneAPI-samples)
 ***
@@ -25,7 +25,7 @@ Previously created terminals contain only the environment in which they were cre
 You can specify the direct path to the oneAPI install directory in order to avoid searching for the environment every time the environment is initialized.
 
 1. Press `Ctrl+, (or File -> Preferences -> Settings)` to open the Settings.
-2. On the left side of the Settings window, select `Extensions>Environment Configurator for Intel® oneAPI Toolkits`.
+2. On the left side of the Settings window, select `Extensions>Environment Configurator for Intel Software Developer Tools`.
 3. In the "ONEAPI_ROOT" field, specify the path to the installation directory of the oneAPI toolkit.
 
 ## Using setvars_config files for oneAPI Environment
@@ -35,7 +35,7 @@ Due to changes in directory layout, 2024.0 version of Intel® oneAPI Toolkits in
 
 For this you need:
 1. Press `Ctrl+, ( or File -> Preferences -> Settings )` to open the Settings.
-2. On the left side of the Settings window, select `Extensions>Environment Configurator for Intel® oneAPI Toolkits`.
+2. On the left side of the Settings window, select `Extensions>Environment Configurator for Intel Software Developer Tools`.
 3. In the `SETVARS_CONFIG` area, click `Add Item` and provide the path to your setvars configuration file.
 4. Press `Ctrl+Shift+P` to open the Command Palette. `Type oneAPI` and select `Intel oneAPI: Initialize custom environment variables using SETVARS_CONFIG`.
 5. To switch the environment, click `Intel oneAPI: Switch environment` and select the configuration file that the environment is associated with.
