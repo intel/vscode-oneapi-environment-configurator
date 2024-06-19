@@ -1,8 +1,8 @@
 {
 	"name": "oneapi-environment-configurator",
-	"displayName": "Environment Configurator for Intel® oneAPI Toolkits",
+	"displayName": "Environment Configurator for Intel Software Developer Tools",
 	"description": "Configure environment for working with Intel® oneAPI Toolkits",
-	"version": "0.2.12",
+	"version": "0.2.13",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
@@ -19,7 +19,7 @@
 	"contributes": {
 		"configuration": [
 			{
-				"title": "Environment Configurator for Intel® oneAPI Toolkits",
+				"title": "Environment Configurator for Intel Software Developer Tools",
 				"properties": {
 					"intel-corporation.oneapi-environment-configurator.ONEAPI_ROOT": {
 						"type": "string",

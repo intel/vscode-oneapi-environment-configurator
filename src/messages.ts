@@ -13,7 +13,7 @@ export default {
     deprVersion: (deprExtName: string, actualExtName: string) => { return `${deprExtName} is a deprecated version of the ${actualExtName}. This may lead to the unavailability of overlapping functions.`; },
     notChangeEnv: 'Do not change the environment.',
     alternateEnv: 'Alternate environment is not available. Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.',
-    failedToActivate: 'Failed to activate the \'Environment Configurator for Intel oneAPI Toolkits\' extension. The extension is only supported on Linux and Windows.',
+    failedToActivate: 'Failed to activate the \'Environment Configurator for Intel Software Developer Tools\' extension. The extension is only supported on Linux and Windows.',
     failedToCheckPwsh: 'Failed to determine powershell version. The environment will not be set.',
     autoEnvScriptSearch: (envScriptName: string) => { return `Try to find ${envScriptName} automatically.`; },
     customConfigFile: 'No setvars_config files are specified in the settings. Open settings and search for SETVARS_CONFIG to specify the path to your custom configuration file.',

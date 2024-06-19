@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.13
+
+- Updated extension name
+
 ## 0.2.12
 
 - Added support for possible localization

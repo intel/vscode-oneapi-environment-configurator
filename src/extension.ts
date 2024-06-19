@@ -54,5 +54,5 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-    console.log('Environment Configurator for Intel oneAPI Toolkits: Goodbye');
+    console.log('Environment Configurator for Intel Software Developer Tools: Goodbye');
 }
