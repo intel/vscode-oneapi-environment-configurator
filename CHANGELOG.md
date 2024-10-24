@@ -1,4 +1,7 @@
 # Change Log
+## 0.2.15
+
+- 3rd Party component dependency version update - Bumps micromatch
 
 ## 0.2.14
 
