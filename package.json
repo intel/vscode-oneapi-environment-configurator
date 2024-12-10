@@ -78,7 +78,7 @@
 		"eslint-plugin-n": "^16.0.1",
 		"eslint-plugin-node": "^11.1.0",
 		"eslint-plugin-promise": "^6.1.1",
-		"mocha": "^10.2.0",
+		"mocha": "^10.8.2",
 		"typescript": "^5.2.2",
 		"@vscode/vsce": "^2.21.1",
 		"vscode-extension-tester": "^5.9.1"
