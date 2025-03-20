@@ -1,4 +1,8 @@
 # Change Log
+## 0.2.16
+
+- CVE Vulnerability Fixes and Enhanced Support for Multiple Inputs in Setvars
+
 ## 0.2.15
 
 - 3rd Party component dependency version update - Bumps micromatch
