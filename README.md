@@ -43,6 +43,21 @@ For this you need:
 
 Also the name of the configuration file can be arbitrary, but it will be used as an environment identifier. Using different files with the same name will result in the reinitialization of the current environment and not the creation of a new one.
 
+### Passing arguments to component `vars` script through custom setvars configuration file.
+
+Starting with the 2025.1 release, config file support arguments i.e (key=value1,value2,value3,...) to component `env/vars` scripts
+
+Create a `config.txt` file that contains the following lines with list of arguments:
+
+```
+mkl=latest,lp64 ilp64
+compiler=latest,--include-intel-llvm,vs2022
+dpcpp-ct=latest,vs2017
+tbb=2022.1,all
+```
+In above example the first argument is required, while the remaining arguments are optional.
+In "listofvalues" the first argument always names a version directory that is at the top level of the component directory. This can also be a symlink.The first argument is followed by a comma separated list of arguments.
+
 ## Contributing
 Install Visual Studio Code (at least version 1.83.1) and open this project within it.
 You may also need `node+npm` installed:
