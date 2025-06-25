@@ -58,6 +58,24 @@ tbb=2022.1,all
 In above example the first argument is required, while the remaining arguments are optional.
 In "listofvalues" the first argument always names a version directory that is at the top level of the component directory. This can also be a symlink.The first argument is followed by a comma separated list of arguments.
 
+
+## Intel® oneAPI DPC++/C++ Compiler Support in CMake Tools for VS Code
+CMake Tools in VS Code does not detect Intel oneAPI compilers by default. This feature automates their detection and configuration for seamless integration.
+### Configuration Steps
+1. Ensure the following prerequisites are met:
+    - **Intel oneAPI Toolkits** is installed.
+    - A **workspace** is open in VS Code.
+    - **Microsoft CMake Tools** extension is installed.
+2. Press `Ctrl+, ( or File -> Preferences -> Settings )` to open the Settings.
+3. Navigate to **Extensions → CMake Tools**.
+4. Modify `.vscode/cmake-kits.json` to include Intel compilers.
+5. Open Command Palette (`Ctrl+Shift+P`), select **Intel oneAPI: Configure Intel oneAPI DPC++/C++ Compiler for CMake Tools**.
+6. Choose a **oneAPI environment script** before configuring `.vscode/cmake-kits.json`.
+7. A **toast notification** will prompt you to reload for changes to take effect.
+### Outcome
+CMake Tools will detect Intel compilers, simplifying setup and build execution.
+![GIF of the Intel Compiler demo for CMake Tools](/media/IntelCompilerForCMakeTools.gif)
+
 ## Contributing
 Install Visual Studio Code (at least version 1.83.1) and open this project within it.
 You may also need `node+npm` installed:

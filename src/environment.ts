@@ -7,12 +7,15 @@
 
 'use strict';
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { execSync, spawn } from 'child_process';
 import { posix, join, parse } from 'path';
 import { existsSync, readdirSync } from 'fs';
 
+
 import { Storage } from './utils/storage_utils';
-import { getPSexecutableName } from './utils/terminal_utils';
+import { getPSexecutableName, notifyUserToReloadStaleTerminals } from './utils/terminal_utils';
 import messages from './messages';
 
 type CmdForRunSetvars = {
@@ -72,13 +75,15 @@ export abstract class OneApiEnv {
     abstract initializeCustomEnvironment(): Promise<void>;
     abstract clearEnvironment(): void;
     abstract switchEnv(): Promise<boolean>;
-
+    abstract configureIntelCompilerForCMake(): Promise<void>;
+    
     protected async getEnvironment(isDefault: boolean): Promise<boolean | undefined> {
         let envScripts = await this.findEnvScript('setvars');
 
         if (isDefault) {
             const oneapiVars = await this.findEnvScript('oneapi-vars');
-
+            // Explicitly check if user pressed Esc key
+            if (oneapiVars.length > 0 && oneapiVars[0] === messages.escapeKey) return false;
             envScripts = envScripts.concat(oneapiVars);
         }
         if (envScripts.length === 0) {
@@ -86,7 +91,6 @@ export abstract class OneApiEnv {
             const option = await vscode.window.showErrorMessage(
                 messages.errorEnvScriptPath(fileExtension),
                 messages.installToolkit, messages.setPathToEnvScript);
-
             if (option === messages.installToolkit) {
                 vscode.env.openExternal(vscode.Uri.parse(
                     messages.toolkitsLink));
@@ -98,7 +102,6 @@ export abstract class OneApiEnv {
                         'oneAPI environmnet script': [fileExtension]
                     }
                 };
-
                 const setVarsFileUri = await vscode.window.showOpenDialog(options);
 
                 if (setVarsFileUri && setVarsFileUri[0]) {
@@ -111,12 +114,10 @@ export abstract class OneApiEnv {
             return false;
         } else {
             let envScriptToUse = null;
-
             if (envScripts.length > 1) {
                 const options: vscode.InputBoxOptions = {
                     placeHolder: messages.multipleEnvScriptPaths
                 };
-
                 while (!envScriptToUse) {
                     envScriptToUse = await vscode.window.showQuickPick(envScripts, options);
                 }
@@ -195,6 +196,7 @@ export abstract class OneApiEnv {
                     });
 
                     const tmp = await vscode.window.showQuickPick(optinosItems, options);
+                    if(!tmp) return [messages.escapeKey];
 
                     if (tmp?.label !== messages.continue) {
                         return [];
@@ -416,14 +418,149 @@ export abstract class OneApiEnv {
         }
         return true;
     }
+
+    /**
+     * Function to fetch env Script Path and update in CMake Kit file
+     */
+    protected async getEnvForCMake(): Promise<boolean | undefined> {
+        let envScripts = await this.findEnvScript('setvars');
+        const oneapiVars = await this.findEnvScript('oneapi-vars');
+        // Explicitly check if user pressed Esc key
+        if (oneapiVars.length > 0 && oneapiVars[0] === messages.escapeKey) return false;
+        envScripts = envScripts.concat(oneapiVars);
+
+        if (envScripts.length === 0) {
+            const fileExtension = process.platform === 'win32' ? 'bat' : 'sh';
+            const option = await vscode.window.showErrorMessage(
+                messages.errorEnvScriptPath(fileExtension),
+                messages.installToolkit, messages.setPathToEnvScript);
+
+            if (option === messages.installToolkit) {
+                vscode.env.openExternal(vscode.Uri.parse(
+                    messages.toolkitsLink));
+                return false;
+            } else if (option === messages.setPathToEnvScript) {
+                const options: vscode.OpenDialogOptions = {
+                    canSelectMany: false,
+                    filters: {
+                        'oneAPI environment script': [fileExtension]
+                    }
+                };
+                const setVarsFileUri = await vscode.window.showOpenDialog(options);
+
+                if (setVarsFileUri && setVarsFileUri[0]) {
+                    await this.updateCMakeKits(setVarsFileUri[0].fsPath);
+                    return true;
+                } else {
+                    vscode.window.showErrorMessage(messages.errorSetvarsPath(fileExtension), { modal: true });
+                    return false;
+                }
+            }
+            return false;
+        } else {
+            let envScriptToUse: string | undefined = undefined;
+            let userChoice: string | undefined = undefined;
+
+            if (envScripts.length > 1) {
+                const options: vscode.QuickPickOptions = {
+                    placeHolder: messages.multipleEnvScriptPaths,
+                    canPickMany: false
+                };
+                envScriptToUse = await vscode.window.showQuickPick(envScripts, options);
+                // Explicitly check if user pressed Esc (undefined)
+                if (!envScriptToUse) {
+                    return false;
+                }
+            } else {
+                envScriptToUse = envScripts[0];
+                const updateOptions = ["Update", "Skip"];
+                userChoice = await vscode.window.showQuickPick(updateOptions, {
+                    placeHolder: `${envScriptToUse} script was found. Do you want to update?`,
+                    canPickMany: false
+                });
+            }
+            if (userChoice === "Update" || envScripts.length > 1) {
+                const isUpdate = await this.updateCMakeKits(envScriptToUse);
+                if (isUpdate) vscode.window.showInformationMessage(messages.envScriptFound(envScriptToUse));
+                return isUpdate;
+            } else {
+                return false;
+            }
+        }
+    }
+    /**
+     * Function to Create/Update the cmake-kits.json File
+     */
+    private async updateCMakeKits(envScriptPath: string): Promise<boolean> {
+        if (!vscode.workspace.workspaceFolders) {
+            vscode.window.showErrorMessage("No workspace is open");
+            return false;
+        }
+
+        const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const kitsPath = path.join(workspacePath, messages.vscodeDir, messages.cmakeKitJsonFile);
+        let kits = [];
+
+        // Read existing cmake-kits.json if it exists
+        if (fs.existsSync(kitsPath)) {
+            try {
+                const fileData = fs.readFileSync(kitsPath, 'utf8');
+                kits = JSON.parse(fileData);
+            } catch (err) {
+                vscode.window.showErrorMessage("Failed to parse existing cmake-kits.json");
+                return false;
+            }
+        }
+
+        // Find the existing DPC++ kit
+        const dpcppExists = kits.find((kit: { name: string, environmentSetupScript: string }) =>
+            kit.name === messages.intelOneApiCompiler
+        );
+
+        if (dpcppExists) {
+            // Update the environment setup script if it's different
+            if (dpcppExists.environmentSetupScript !== envScriptPath) {
+                dpcppExists.environmentSetupScript = envScriptPath;
+                vscode.window.showInformationMessage("Intel oneAPI DPC++/C++ Compiler has been updated in cmake-kits.json");
+            } else {
+                vscode.window.showInformationMessage("Intel oneAPI DPC++/C++ Compiler entry already exists in cmake-kits.json");
+            }
+        } else {
+            // Add a new DPC++ kit if it doesn't exist
+            kits.push({
+                name: messages.intelOneApiCompiler,
+                environmentSetupScript: envScriptPath,
+                compilers: {
+                    C: 'icx',
+                    CXX: 'icpx'
+                }
+            });
+            vscode.window.showInformationMessage("Intel oneAPI DPC++/C++ Compiler has been added in cmake-kits.json");
+        }
+        try {
+            // Ensure .vscode folder exists
+            const vscodeDir = path.join(workspacePath, messages.vscodeDir);
+            if (!fs.existsSync(vscodeDir)) {
+                fs.mkdirSync(vscodeDir);
+            }
+            // Write updated kits back
+            fs.writeFileSync(kitsPath, JSON.stringify(kits, null, 4));
+            return true; // Successfully updated
+        } catch (error) {
+            vscode.window.showErrorMessage("Failed to write to cmake-kits.json");
+            return false;
+        }
+    }
 }
 
 export class MultiRootEnv extends OneApiEnv {
     private storage: Storage;
     private envCollection: string[];
+    private context: vscode.ExtensionContext;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
+        this.context = context;
         this.storage = new Storage(context.workspaceState);
         this.envCollection = [];
         this.envCollection.push(this.activeEnv);
@@ -475,6 +612,9 @@ export class MultiRootEnv extends OneApiEnv {
                 activeEnvCollection.set(k, m.value);
             });
             await this.storage.writeEnvToExtensionStorage(this.activeEnv, activeEnvCollection);
+            await this.context.globalState.update(messages.isOneApiEnvSetBeforeExit, true);
+            await notifyUserToReloadStaleTerminals();
+
         }
     }
 
@@ -547,6 +687,8 @@ export class MultiRootEnv extends OneApiEnv {
             return item !== nameToDel;
         });
         await this.storage.writeEnvToExtensionStorage(env, undefined);
+        await this.context.globalState.update(messages.isOneApiEnvSetBeforeExit, false);
+        await notifyUserToReloadStaleTerminals();
         this.activeEnv = messages.defaultEnv;
         this.setEnvNameToStatusBar(undefined);
     }
@@ -557,12 +699,16 @@ export class MultiRootEnv extends OneApiEnv {
         const env = await this.storage.readEnvFromExtensionStorage(envName);
 
         if (!env || env.size === 0) {
+            await this.context.globalState.update(messages.isOneApiEnvSetBeforeExit, false);
+            await notifyUserToReloadStaleTerminals();
             return false;
         }
         for (const keyValuePair of env) {
             this.collection.append(keyValuePair[0], keyValuePair[1]);
             process.env[keyValuePair[0]] = keyValuePair[1];
         }
+        await this.context.globalState.update(messages.isOneApiEnvSetBeforeExit, true);
+        await notifyUserToReloadStaleTerminals();
         return true;
     }
 
@@ -571,6 +717,34 @@ export class MultiRootEnv extends OneApiEnv {
 
         if (!env) {
             await this.addEnv(this.activeEnv);
+        }
+    }
+
+    /**
+     * Function to Configure the Intel Compiler for CMake Tools
+     */
+    async configureIntelCompilerForCMake(): Promise<void> {
+        const cmakeExtension = vscode.extensions.getExtension('ms-vscode.cmake-tools');
+        if (cmakeExtension) {
+            if (!cmakeExtension.isActive) {
+                await cmakeExtension.activate();
+            }
+            // Update cmake-kits.json
+            if ((await this.getEnvForCMake()) === true) {
+
+                // Prompt user before reloading
+                const reload = await vscode.window.showInformationMessage(
+                    "Intel Compiler configuration has been updated. Reload required for changes to take effect.",
+                    "Reload Now",
+                    "Later"
+                );
+
+                if (reload === "Reload Now") {
+                    await vscode.commands.executeCommand('workbench.action.reloadWindow');
+                }
+            }
+        } else {
+            vscode.window.showErrorMessage("CMake Tools extension not detected. Please install it to continue.");
         }
     }
 }
