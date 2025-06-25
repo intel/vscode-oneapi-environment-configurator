@@ -42,5 +42,10 @@ export default {
     toolkitsLink: 'https://www.intel.com/content/www/us/en/developer/tools/oneapi/toolkits.html',
     setPathToEnvScript: 'Set path to environment script manually',
     removedEnv: 'oneAPI environment has been successfully removed.',
+    intelOneApiCompiler: 'Intel oneAPI DPC++/C++ Compiler',
+    cmakeKitJsonFile: 'cmake-kits.json',
+    vscodeDir: '.vscode',
+    escapeKey: 'Esc',
+    isOneApiEnvSetBeforeExit: 'isOneApiEnvSetBeforeExit',
     zzz: 'end of message list, do not use in application'
 };

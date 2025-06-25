@@ -37,5 +37,6 @@ export class DevFlow {
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-configurator.initializeEnvironmentConfig', () => environment.initializeCustomEnvironment()));
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-configurator.clearEnvironment', () => environment.clearEnvironment()));
         context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-configurator.switchEnv', () => environment.switchEnv()));
+        context.subscriptions.push(vscode.commands.registerCommand('intel-corporation.oneapi-environment-configurator.configureIntelCompilerForCMake', () => environment.configureIntelCompilerForCMake()));
     }
 }

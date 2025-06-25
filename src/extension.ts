@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import { DevFlow } from './devFlow';
 import messages from './messages';
+import { notifyUserToReloadStaleTerminals } from './utils/terminal_utils';
 enum ExtensionState {
     deprecated,
     actual,
@@ -46,7 +47,16 @@ function checkExtensionsConflict(id: string) {
     });
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    let isEnvSetBeforeExit = context.globalState.get<boolean>(messages.isOneApiEnvSetBeforeExit);
+    if (isEnvSetBeforeExit) {
+        // Delay to ensure VS Code and shell are fully ready
+        setTimeout(async () => {
+            await notifyUserToReloadStaleTerminals();
+            await context.globalState.update(messages.isOneApiEnvSetBeforeExit, false);
+        }, 1000); // delay can be tweaked (500–1500ms)
+    }
+
     // Checking for outdated versions of extensions in the VS Code environment
     checkExtensionsConflict(context.extension.id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,4 +1,8 @@
 # Change Log
+## 0.2.17
+
+- Fixed environment state/messaging issues on VS Code restart; ; CVE fixes included
+
 ## 0.2.16
 
 - CVE Vulnerability Fixes and Enhanced Support for Multiple Inputs in Setvars
