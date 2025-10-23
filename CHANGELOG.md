@@ -1,4 +1,8 @@
 # Change Log
+## 0.2.18
+
+- CVE Vulnerability Mitigations
+
 ## 0.2.17
 
 - Fixed environment state/messaging issues on VS Code restart; ; CVE fixes included
