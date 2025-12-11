@@ -2,7 +2,7 @@
 	"name": "oneapi-environment-configurator",
 	"displayName": "Environment Configurator for Intel Software Developer Tools",
 	"description": "Configure environment for working with Intel® oneAPI Toolkits",
-	"version": "0.2.18",
+	"version": "0.2.19",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
@@ -67,6 +67,9 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"test": "./node_modules/.bin/extest setup-and-run -y -o ./src/test/ui/test-configs/settings.json -m ./src/test/ui/test-configs/.mocharc.js ./out/test/ui/ui.test.js"
+	},
+	"overrides": {
+		"glob": "^11.0.0 || >=11.1.0"
 	},
 	"devDependencies": {
 		"@types/chai": "^4.3.6",
