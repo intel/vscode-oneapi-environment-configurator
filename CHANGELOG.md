@@ -1,4 +1,13 @@
 # Change Log
+
+## 0.2.22
+
+- Security: Addressed multiple reported CVE vulnerabilities.
+
+## 0.2.21
+
+- CVE Vulnerability Mitigations
+
 ## 0.2.20
 
 - Security: Mitigated multiple reported CVE vulnerabilities  

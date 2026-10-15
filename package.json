@@ -2,7 +2,7 @@
 	"name": "oneapi-environment-configurator",
 	"displayName": "Environment Configurator for Intel Software Developer Tools",
 	"description": "Configure environment for working with Intel® oneAPI Toolkits",
-	"version": "0.2.21",
+	"version": "0.2.22",
 	"license": "MIT",
 	"icon": "media/oneapi-logo.png",
 	"publisher": "intel-corporation",
@@ -80,7 +80,7 @@
 		"@types/vscode": "^1.82.0",
 		"@typescript-eslint/eslint-plugin": "^8.62.1",
 		"@typescript-eslint/parser": "^8.62.1",
-		"@vscode/vsce": "^3.5.0",
+		"@vscode/vsce": "^4.0.0",
 		"chai": "^4.3.10",
 		"eslint": "^8.50.0",
 		"eslint-config-standard": "^17.1.0",
@@ -88,9 +88,9 @@
 		"eslint-plugin-n": "^16.0.1",
 		"eslint-plugin-node": "^11.1.0",
 		"eslint-plugin-promise": "^6.1.1",
-		"mocha": "^11.7.5",
+		"mocha": "^12.0.3",
 		"typescript": "^5.2.2",
-		"vscode-extension-tester": "^8.23.0"
+		"vscode-extension-tester": "^8.28.1"
 	},
 	"repository": {
 		"type": "git",
